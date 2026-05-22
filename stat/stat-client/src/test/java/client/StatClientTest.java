@@ -1,7 +1,7 @@
-package statClient;
+package client;
 
-import dto.EndpointHitDto;
-import dto.ViewStatsDto;
+import ru.practicum.stats.dto.EndpointHitDto;
+import ru.practicum.stats.dto.ViewStatsDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+import ru.practicum.stats.client.StatClient;
 
 import java.net.URI;
 import java.net.URLDecoder;
