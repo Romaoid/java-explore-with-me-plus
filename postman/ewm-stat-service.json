@@ -1,0 +1,14 @@
+{
+  "info": {
+    "_postman_id": "6938df2e-cb55-49d3-99d7-b7a1956859da",
+    "name": "ewm-stat-service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "24870550"
+  },
+  "item": [
+    {
+      "name": "New Folder",
+      "item": []
+    }
+  ]
+}
