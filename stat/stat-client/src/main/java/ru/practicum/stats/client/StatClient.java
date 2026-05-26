@@ -2,6 +2,7 @@ package ru.practicum.stats.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
@@ -24,6 +25,7 @@ public class StatClient {
     private static final Logger log = LoggerFactory.getLogger(StatClient.class);
     private final RestClient restClient;
 
+    @Autowired
     public StatClient(@Value("${client.url}") String statUrl) {
         this.restClient = RestClient.builder()
                 .baseUrl(statUrl)
@@ -83,11 +85,11 @@ public class StatClient {
             }
         }
 
-        URI uri = builder.build().encode().toUri();
+        //URI uri = builder.build().encode().toUri();
 
         try {
             List<ViewStatsDto> stats = restClient.get()
-                    .uri(uri)
+                    .uri(builder.build().encode().toString())
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<ViewStatsDto>>() {
                     });

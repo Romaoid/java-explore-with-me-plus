@@ -9,7 +9,10 @@ import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
 import ru.practicum.stats.server.service.StatService;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -26,15 +29,22 @@ public class StatController {
     }
 
     @GetMapping(path = "/stats")
-    public List<ViewStatsDto> getStats(@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
-                                       @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end,
+    public List<ViewStatsDto> getStats(@RequestParam String start,
+                                       @RequestParam String end,
                                        @RequestParam(defaultValue = "false") boolean unique,
                                        @RequestParam(required = false) List<String> uris) {
         log.info("Вызван эндпоинт на получение списка статистики с параметрами: start = {},\nend = {},\nunique = {},\nuris = {}",
                 start, end, unique, uris);
 
+        String decodedStart = URLDecoder.decode(start, StandardCharsets.UTF_8);
+        String decodedEnd = URLDecoder.decode(end, StandardCharsets.UTF_8);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime startDate = LocalDateTime.parse(decodedStart, formatter);
+        LocalDateTime endDate = LocalDateTime.parse(decodedEnd, formatter);
+
         uris = (uris == null || uris.isEmpty()) ? null : uris;
 
-        return service.getStats(start, end, unique, uris);
+        return service.getStats(startDate, endDate, unique, uris);
     }
 }
