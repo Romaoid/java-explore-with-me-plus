@@ -33,7 +33,7 @@ public class StatController {
         log.info("Вызван эндпоинт на получение списка статистики с параметрами: start = {},\nend = {},\nunique = {},\nuris = {}",
                 start, end, unique, uris);
 
-        uris = (uris == null || uris.isEmpty()) ? uris : null;
+        uris = (uris == null || uris.isEmpty()) ? null : uris;
 
         return service.getStats(start, end, unique, uris);
     }
