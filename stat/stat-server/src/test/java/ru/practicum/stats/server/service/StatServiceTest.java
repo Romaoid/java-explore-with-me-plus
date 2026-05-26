@@ -114,12 +114,21 @@ class StatServiceTest {
 
     private ViewStat createMockViewStat(String app, String uri, Long hits) {
         return new ViewStat() {
+
             @Override
-            public String getAppName() { return app; }
+            public String getAppName() {
+                return app;
+            }
+
             @Override
-            public String getUri() { return uri; }
+            public String getUri() {
+                return uri;
+            }
+
             @Override
-            public Long getHits() { return hits; }
+            public Long getHits() {
+                return hits;
+            }
         };
     }
 }

@@ -12,7 +12,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -84,8 +83,6 @@ public class StatClient {
                 builder.queryParam("uris", uri);
             }
         }
-
-        //URI uri = builder.build().encode().toUri();
 
         try {
             List<ViewStatsDto> stats = restClient.get()

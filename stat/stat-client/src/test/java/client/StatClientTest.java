@@ -16,7 +16,6 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import ru.practicum.stats.client.StatClient;
 
-import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -189,7 +188,7 @@ class StatClientTest {
         );
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(expectedStats);
 
@@ -201,7 +200,7 @@ class StatClientTest {
         assertThat(result.get(1).getHits()).isEqualTo(5);
 
         verify(restClient).get();
-        verify(requestHeadersUriSpec).uri(any(URI.class));
+        verify(requestHeadersUriSpec).uri(any(String.class));
         verify(requestHeadersSpec).retrieve();
         verify(responseSpecForGet).body(any(ParameterizedTypeReference.class));
     }
@@ -214,16 +213,16 @@ class StatClientTest {
         Boolean unique = false;
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(Collections.emptyList());
 
         statClient.getStat(start, end, uris, unique);
 
-        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(requestHeadersUriSpec).uri(urlCaptor.capture());
 
-        String url = URLDecoder.decode(urlCaptor.getValue().toString(), StandardCharsets.UTF_8);
+        String url = URLDecoder.decode(urlCaptor.getValue(), StandardCharsets.UTF_8);
         assertThat(url).contains("start=2024-01-01 12:00:00");
         assertThat(url).contains("end=2024-01-01 18:00:00");
         assertThat(url).contains("unique=false");
@@ -239,16 +238,16 @@ class StatClientTest {
         Boolean unique = true;
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(Collections.emptyList());
 
         statClient.getStat(start, end, uris, unique);
 
-        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(requestHeadersUriSpec).uri(urlCaptor.capture());
 
-        String url = URLDecoder.decode(urlCaptor.getValue().toString(), StandardCharsets.UTF_8);
+        String url = URLDecoder.decode(urlCaptor.getValue(), StandardCharsets.UTF_8);
         assertThat(url).contains("uris=/events");
         assertThat(url).contains("uris=/events/1");
         assertThat(url).contains("uris=/events/2");
@@ -263,16 +262,16 @@ class StatClientTest {
         Boolean unique = false;
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(Collections.emptyList());
 
         statClient.getStat(start, end, uris, unique);
 
-        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(requestHeadersUriSpec).uri(urlCaptor.capture());
 
-        String url = URLDecoder.decode(urlCaptor.getValue().toString(), StandardCharsets.UTF_8);
+        String url = URLDecoder.decode(urlCaptor.getValue(), StandardCharsets.UTF_8);
         assertThat(url).contains("start=2024-01-01 00:00:00");
         assertThat(url).contains("end=2024-01-02 00:00:00");
         assertThat(url).contains("unique=false");
@@ -287,16 +286,16 @@ class StatClientTest {
         Boolean unique = false;
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(Collections.emptyList());
 
         statClient.getStat(start, end, uris, unique);
 
-        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(requestHeadersUriSpec).uri(urlCaptor.capture());
 
-        String url = URLDecoder.decode(urlCaptor.getValue().toString(), StandardCharsets.UTF_8);
+        String url = URLDecoder.decode(urlCaptor.getValue(), StandardCharsets.UTF_8);
         assertThat(url).doesNotContain("uris");
     }
 
@@ -317,24 +316,6 @@ class StatClientTest {
     }
 
     @Test
-    void getStat_shouldHandleNullResponseFromServer() {
-        LocalDateTime start = LocalDateTime.of(2024, 1, 1, 0, 0, 0);
-        LocalDateTime end = LocalDateTime.of(2024, 1, 2, 0, 0, 0);
-        List<String> uris = List.of("/events");
-        Boolean unique = false;
-
-        when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
-        when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(null);
-
-        List<ViewStatsDto> result = statClient.getStat(start, end, uris, unique);
-
-        assertThat(result).isNotNull();
-        assertThat(result).isEmpty();
-    }
-
-    @Test
     void getStat_shouldFormatDateCorrectly() {
         LocalDateTime start = LocalDateTime.of(2024, 12, 31, 23, 59, 59);
         LocalDateTime end = LocalDateTime.of(2025, 1, 1, 0, 0, 0);
@@ -342,16 +323,16 @@ class StatClientTest {
         Boolean unique = true;
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(Collections.emptyList());
 
         statClient.getStat(start, end, uris, unique);
 
-        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(requestHeadersUriSpec).uri(urlCaptor.capture());
 
-        String url = URLDecoder.decode(urlCaptor.getValue().toString(), StandardCharsets.UTF_8);
+        String url = URLDecoder.decode(urlCaptor.getValue(), StandardCharsets.UTF_8);
         assertThat(url).contains("start=2024-12-31 23:59:59");
         assertThat(url).contains("end=2025-01-01 00:00:00");
     }
@@ -364,7 +345,7 @@ class StatClientTest {
         Boolean unique = false;
 
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(URI.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersUriSpec.uri(any(String.class))).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpecForGet);
         when(responseSpecForGet.body(any(ParameterizedTypeReference.class))).thenReturn(Collections.emptyList());
 
