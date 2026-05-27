@@ -16,7 +16,8 @@ public interface StatStorage extends JpaRepository<Stat, Long> {
             "FROM Stat s " +
             "WHERE s.timestamp BETWEEN :start AND :end " +
             "AND (:uris IS NULL OR s.uri IN :uris) " +
-            "GROUP BY s.app.name, s.uri")
+            "GROUP BY s.app.name, s.uri " +
+            "ORDER BY hits DESC")
     List<ViewStat> getStats(@Param("start") LocalDateTime start,
                             @Param("end") LocalDateTime end,
                             @Param("unique") boolean unique,
