@@ -1,5 +1,6 @@
 package ru.practicum.ewm.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -34,7 +35,7 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ValidationException.class,
-            MissingServletRequestParameterException.class})
+            MissingServletRequestParameterException.class, ConstraintViolationException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleBadRequestException(final Exception ex) {
         String reason = "Неправильно созданный запрос.";
@@ -69,7 +70,7 @@ public class ErrorHandler {
         if (ex instanceof DataIntegrityViolationException) {
             log.error("Получен статус 409 Conflict (нарушение целостности данных): {}", ex.getMessage(), ex);
             reason = "Нарушены данные.";
-        } else if  (ex instanceof ConflictException) {
+        } else if (ex instanceof ConflictException) {
             log.error("Получен статус 409 Conflict (бизнес-логика): {}", ex.getMessage(), ex);
             reason = "Неправильные условия для запроса.";
         } else {
