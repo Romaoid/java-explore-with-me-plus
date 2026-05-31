@@ -3,8 +3,8 @@ package ru.practicum.ewm.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.category.CategoryDto;
-import ru.practicum.ewm.category.CategoryService;
+import ru.practicum.ewm.dto.CategoryDto;
+import ru.practicum.ewm.service.CategoryService;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/categories")
 @RequiredArgsConstructor
-public class PublicCategoryController {
+public class CategoryController {
 
     private final CategoryService categoryService;
 
