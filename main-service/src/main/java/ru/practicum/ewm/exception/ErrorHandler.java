@@ -33,60 +33,54 @@ public class ErrorHandler {
                 .build();
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ExceptionHandler({MethodArgumentNotValidException.class, ValidationException.class,
+            MissingServletRequestParameterException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiError handleMethodArgumentNotValidException(final MethodArgumentNotValidException ex) {
-        log.error("Получен статус 400 Bad Request (валидация полей): {}", ex.getMessage(), ex);
+    public ApiError handleBadRequestException(final Exception ex) {
+        String reason = "Неправильно созданный запрос.";
+        String errorMessage;
 
-        String errorMessage =  ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> String.format("Field: %s. Error: %s. Value: %s",
-                        error.getField(), error.getDefaultMessage(), error.getRejectedValue()))
-                .collect(Collectors.joining("; "));
+        if (ex instanceof MethodArgumentNotValidException validationEx) {
+            log.error("Получен статус 400 Bad Request (валидация полей): {}", ex.getMessage(), ex);
+
+            errorMessage = validationEx.getBindingResult().getFieldErrors().stream()
+                    .map(error -> String.format("Field: %s. Error: %s. Value: %s",
+                            error.getField(), error.getDefaultMessage(), error.getRejectedValue()))
+                    .collect(Collectors.joining("; "));
+        } else {
+            log.error("Получен статус 400 Bad Request (валидация параметров): {}", ex.getMessage(), ex);
+            errorMessage = ex.getMessage();
+        }
 
         return ApiError.builder()
                 .errors(getStackTrace(ex))
                 .message(errorMessage)
-                .reason("Bad Request.")
+                .reason(reason)
                 .status("BAD_REQUEST")
                 .timestamp(LocalDateTime.now().format(FORMATTER))
                 .build();
     }
 
-    @ExceptionHandler({ValidationException.class, MissingServletRequestParameterException.class})
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiError handleBadRequestException(final Exception ex) {
-        log.error("Получен статус 400 Bad Request (валидация параметров): {}", ex.getMessage(), ex);
-
-        return ApiError.builder()
-                .errors(getStackTrace(ex))
-                .message(ex.getMessage())
-                .reason("Неправильно созданный запрос.")
-                .status("BAD_REQUEST")
-                .timestamp(LocalDateTime.now().format(FORMATTER))
-                .build();
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ExceptionHandler({DataIntegrityViolationException.class, ConflictException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError handleDataIntegrityViolationException(final DataIntegrityViolationException ex) {
-        log.error("Получен статус 409 Conflict (нарушение целостности данных): {}", ex.getMessage(), ex);
-        return ApiError.builder()
-                .errors(getStackTrace(ex))
-                .message(ex.getMessage())
-                .reason("Нарушены данные.")
-                .status("CONFLICT")
-                .timestamp(LocalDateTime.now().format(FORMATTER))
-                .build();
-    }
+    public ApiError handleConflictException(final Exception ex) {
+        String reason;
 
-    @ExceptionHandler(ConflictException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError handleConflictException(final ConflictException ex) {
-        log.error("Получен статус 409 Conflict (бизнес-логика): {}", ex.getMessage(), ex);
+        if (ex instanceof DataIntegrityViolationException) {
+            log.error("Получен статус 409 Conflict (нарушение целостности данных): {}", ex.getMessage(), ex);
+            reason = "Нарушены данные.";
+        } else if  (ex instanceof ConflictException) {
+            log.error("Получен статус 409 Conflict (бизнес-логика): {}", ex.getMessage(), ex);
+            reason = "Неправильные условия для запроса.";
+        } else {
+            log.error("Получен статус 409 Conflict: {}", ex.getMessage(), ex);
+            reason = "Конфликт запроса.";
+        }
+
         return ApiError.builder()
                 .errors(getStackTrace(ex))
                 .message(ex.getMessage())
-                .reason("Неправильные условия для запроса.")
+                .reason(reason)
                 .status("CONFLICT")
                 .timestamp(LocalDateTime.now().format(FORMATTER))
                 .build();
