@@ -1,0 +1,15 @@
+{
+  "info": {
+    "_postman_id": "29d98353-1838-49d4-8a78-fdb908de6f75",
+    "name": "ewm-main-service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "50944554",
+    "_collection_link": "https://go.postman.co/collection/50944554-29d98353-1838-49d4-8a78-fdb908de6f75?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Categories",
+      "item": []
+    }
+  ]
+}
