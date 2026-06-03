@@ -1,9 +1,6 @@
 package ru.practicum.ewm.mapper;
 
-import ru.practicum.ewm.dto.EventFullDto;
-import ru.practicum.ewm.dto.EventShortDto;
-import ru.practicum.ewm.dto.LocationDto;
-import ru.practicum.ewm.dto.UserShortDto;
+import ru.practicum.ewm.dto.*;
 import ru.practicum.ewm.model.Category;
 import ru.practicum.ewm.model.EventFullView;
 import ru.practicum.ewm.model.EventShortView;
@@ -17,12 +14,12 @@ public class EventMapper {
         return EventFullDto.builder()
                 .id(event.getId())
                 .paid(event.getPaid())
-                .category(CategoryMapper.toDto(event.getCategory()))
+                .category(new CategoryDto(event.getCategoryId(), event.getCategoryName()))
                 .confirmedRequests(event.getConfirmedRequests())
                 .state(event.getState())
                 .title(event.getTitle())
                 .initiator(new UserShortDto(event.getInitiatorId(), event.getInitiatorName()))
-                .location(new LocationDto(event.getLocation().getLat(), event.getLocation().getLon()))
+                .location(new LocationDto(event.getLocationLat(), event.getLocationLon()))
                 .eventDate(event.getEventDate().format(FORMATTER))
                 .createdOn(event.getCreatedOn().format(FORMATTER))
                 .publishedOn(event.getPublishedOn() == null ? null : event.getPublishedOn().format(FORMATTER))

@@ -1,6 +1,5 @@
 package ru.practicum.ewm.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,7 +163,6 @@ public class EventServiceImpl implements EventService {
 
         return events.stream()
                 .map(view -> EventMapper.toShortDto(view, stats.get(view.getId())))
-                .sorted(Comparator.comparingLong(EventShortDto::getViews).reversed()) //Важен порядок выдачи? зачем мы сортировали Дто статистики по просмотрам?
                 .toList();
     }
 
@@ -204,15 +202,16 @@ public class EventServiceImpl implements EventService {
     }
 
     private ViewStatsDto getStatByEvent(Event event) {
-        String uri = "/event/" + event.getId();
+        String uri = "/events/" + event.getId();
 
         log.info("Запрос статистики из stat-db для события: {}", event.getId());
-        return statClient.getStat(
-                        event.getCreated(),
-                        LocalDateTime.now(),
-                        List.of(uri),
-                        false)
-                .getFirst();
+        List<ViewStatsDto> dtos = statClient.getStat(
+                event.getCreated(),
+                LocalDateTime.now(),
+                List.of(uri),
+                false);
+
+        return dtos == null || dtos.isEmpty() ? new ViewStatsDto() : dtos.getFirst();
     }
 
     private EventState validateStateAction(String stateAction, EventState eventState) {
@@ -239,11 +238,10 @@ public class EventServiceImpl implements EventService {
             LocalDateTime end,
             List<String> uris,
             Boolean unique) {
-        //List<String> uris = events.stream().map(event -> "/event/" + event.getId()).toList();
 
         List<ViewStatsDto> stats = statClient.getStat(start, end, uris, unique);
 
-        if (stats == null) {
+        if (stats == null || stats.isEmpty()) {
             return Collections.emptyMap();
         }
 

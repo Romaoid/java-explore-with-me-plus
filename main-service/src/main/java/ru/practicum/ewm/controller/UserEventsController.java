@@ -1,6 +1,5 @@
 package ru.practicum.ewm.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -16,14 +15,14 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/users/{userId}/events")
 @RequiredArgsConstructor
-public class UserController {
+public class UserEventsController {
 
     private final EventService eventService;
     private final ParticipationRequestService requestService;
 
-    @PostMapping("/{userId}/events")
+    @PostMapping()
     @ResponseStatus(HttpStatus.CREATED)
     public EventFullDto addEvent(@Valid @RequestBody NewEventDto request,
                                  @PathVariable Long userId) {
@@ -32,7 +31,7 @@ public class UserController {
         return eventService.addEvent(userId, request);
     }
 
-    @GetMapping("/{userId}/events/{eventId}")
+    @GetMapping("/{eventId}")
     @ResponseStatus(HttpStatus.OK)
     public EventFullDto getOwnEvent(@PathVariable Long userId,
                                  @PathVariable Long eventId) {
@@ -41,7 +40,7 @@ public class UserController {
         return eventService.getOwnEvent(userId, eventId);
     }
 
-    @PatchMapping("/{userId}/events/{eventId}")
+    @PatchMapping("/{eventId}")
     @ResponseStatus(HttpStatus.OK)
     public EventFullDto updateEvent(@Valid @RequestBody UpdateEventUserRequest request,
                                     @PathVariable Long userId,
@@ -51,7 +50,7 @@ public class UserController {
         return eventService.updateEvent(userId, eventId, request);
     }
 
-    @GetMapping("/{userId}/events")
+    @GetMapping("")
     @ResponseStatus(HttpStatus.OK)
     public List<EventShortDto> getOwnEvents(
             @PathVariable Long userId,
@@ -64,7 +63,7 @@ public class UserController {
         return eventService.getOwnEvents(userId, from, size);
     }
 
-    @GetMapping("/{userId}/events/{eventId}/requests")
+    @GetMapping("/{eventId}/requests")
     @ResponseStatus(HttpStatus.OK)
     public List<ParticipationRequestDto> getOwnParticipationRequests(@PathVariable Long userId, @PathVariable Long eventId) {
         log.info("GET /users/{}/events/{}/requests", userId, eventId);
@@ -72,9 +71,9 @@ public class UserController {
         return requestService.getOwnParticipationRequests(userId, eventId);
     }
 
-    @PatchMapping("/{userId}/events/{eventId}/requests")
+    @PatchMapping("/{eventId}/requests")
     @ResponseStatus(HttpStatus.OK)
-    public List<EventRequestStatusUpdateResult> updateRequestsToOwnEvent(@PathVariable Long userId,
+    public EventRequestStatusUpdateResult updateRequestsToOwnEvent(@PathVariable Long userId,
                                                                          @PathVariable Long eventId,
                                                                          @Valid @RequestBody
                                                                              EventRequestStatusUpdateRequest request) {

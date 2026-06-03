@@ -11,13 +11,17 @@ public interface EventFullView {
 
     String getDescription();
 
-    Category getCategory();
+    Long getCategoryId();
+
+    String getCategoryName();
 
     Long getInitiatorId();
 
     String getInitiatorName();
 
-    Location getLocation();
+    Float getLocationLat();
+
+    Float getLocationLon();
 
     Boolean getPaid();
 

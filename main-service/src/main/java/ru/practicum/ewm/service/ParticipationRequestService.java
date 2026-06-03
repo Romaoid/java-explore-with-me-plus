@@ -10,6 +10,6 @@ public interface ParticipationRequestService {
 
     List<ParticipationRequestDto> getOwnParticipationRequests(long ownerId, long eventId);
 
-    List<EventRequestStatusUpdateResult> updateOwnParticipationRequests(Long userId, Long eventId,
+    EventRequestStatusUpdateResult updateOwnParticipationRequests(Long userId, Long eventId,
                                                                   EventRequestStatusUpdateRequest request);
 }
