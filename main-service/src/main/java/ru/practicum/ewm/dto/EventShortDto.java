@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EventDto {
+public class EventShortDto {
     private String annotation;
     private CategoryDto category;
     private Long confirmedRequests;

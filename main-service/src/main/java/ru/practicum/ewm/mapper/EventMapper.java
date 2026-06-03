@@ -1,17 +1,17 @@
 package ru.practicum.ewm.mapper;
 
 import ru.practicum.ewm.dto.CategoryDto;
-import ru.practicum.ewm.dto.EventDto;
+import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.UserDto;
 import ru.practicum.ewm.model.Event;
 
 import java.time.format.DateTimeFormatter;
 
 public class EventMapper {
-    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public static EventDto toEventDto(Event event) {
-        return EventDto.builder()
+    public static EventShortDto toEventDto(Event event) {
+        return EventShortDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
                 .category(CategoryDto.builder()
@@ -19,7 +19,7 @@ public class EventMapper {
                         .name(event.getCategory().getName())
                         .build())
                 .confirmedRequests(0L) // Изменить после добавления запросов
-                .eventDate(event.getEventDate().format(dateTimeFormatter))
+                .eventDate(event.getEventDate().format(DATE_TIME_FORMATTER))
                 .initiator(UserDto.builder()
                         .id(event.getInitiator().getId())
                         .name(event.getInitiator().getName())
