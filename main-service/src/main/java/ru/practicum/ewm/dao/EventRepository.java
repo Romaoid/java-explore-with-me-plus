@@ -1,0 +1,59 @@
+package ru.practicum.ewm.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import ru.practicum.ewm.model.Event;
+import ru.practicum.ewm.model.EventFullView;
+import ru.practicum.ewm.model.EventShortView;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface EventRepository extends JpaRepository<Event, Long> {
+    @Query("SELECT " +
+            "e.id AS id, " +
+            "e.title AS title, " +
+            "e.annotation AS annotation, " +
+            "e.description AS description, " +
+            "e.category AS categoryId, " +
+            "e.category AS categoryName, " +
+            "e.initiator.id AS initiatorId, " +
+            "e.initiator.name AS initiatorName, " +
+            "e.location.lat AS locationLat, " +
+            "e.location.lon AS locationLon, " +
+            "e.paid AS paid, " +
+            "e.requestModeration AS requestModeration, " +
+            "e.participantLimit AS participantLimit, " +
+            "e.created AS createdOn, " +
+            "e.eventDate AS eventDate, " +
+            "e.published AS publishedOn, " +
+            "e.state AS state, " +
+            "(SELECT COUNT(r) FROM ParticipationRequest r WHERE r.event = e AND r.status = 'CONFIRMED') AS confirmedRequests " +
+            "FROM Event e " +
+            "WHERE e.id = :eventId")
+    Optional<EventFullView> findFullViewById(@Param("eventId") Long id);
+
+    @Query(value = "SELECT " +
+            "e.id, " +
+            "e.title, " +
+            "e.annotation, " +
+            "e.category_id, " +
+            "c.name, " +
+            "e.event_date, " +
+            "e.initiator_id, " +
+            "u.name, " +
+            "e.paid, " +
+            "COALESCE((SELECT COUNT(*) " +
+            "FROM participation_requests pr WHERE pr.event_id = e.id AND pr.status = 'CONFIRMED'), 0) " +
+            "FROM events e " +
+            "JOIN categories c ON e.category_id = c.id " +
+            "JOIN users u ON e.initiator_id = u.id " +
+            "WHERE e.initiator_id = :userId " +
+            "ORDER BY e.event_date DESC " +
+            "OFFSET :from LIMIT :size",
+    nativeQuery = true)
+    List<EventShortView> findShortViewsById(@Param("userId") long id,
+                                            @Param("from") long from,
+                                            @Param("size") long size);
+}
