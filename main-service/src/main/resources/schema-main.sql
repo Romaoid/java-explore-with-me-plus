@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS events (
     state              VARCHAR(30) DEFAULT 'PENDING',
     published_on       TIMESTAMP,
     created_on         TIMESTAMP NOT NULL,
-    CONSTRAINT fk_events_category_id FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    CONSTRAINT fk_events_category_id FOREIGN KEY (category_id) REFERENCES categories(id),
     CONSTRAINT fk_events_location_id FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
     CONSTRAINT fk_events_initiator_id FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE
 );

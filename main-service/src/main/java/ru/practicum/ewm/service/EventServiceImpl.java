@@ -20,7 +20,11 @@ import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.model.*;
 import ru.practicum.stats.client.StatClient;
 import ru.practicum.stats.dto.ViewStatsDto;
+import ru.practicum.ewm.dto.AdminEventSearchParams;
+import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 
+import java.time.format.DateTimeParseException;
+import java.util.Collection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -57,6 +61,8 @@ public class EventServiceImpl implements EventService {
                 .participantLimit(dto.getParticipantLimit())
                 .paid(dto.getPaid())
                 .requestModeration(dto.getRequestModeration())
+                .created(LocalDateTime.now())
+                .state(EventState.PENDING)
                 .build();
         log.info("Запись в базу данных объекта Event: {}", newEvent);
 
@@ -166,6 +172,108 @@ public class EventServiceImpl implements EventService {
                 .toList();
     }
 
+    @Override
+    public List<EventFullDto> getEventsByAdmin(AdminEventSearchParams params) {
+        boolean usersEmpty = isEmpty(params.getUsers());
+        boolean statesEmpty = isEmpty(params.getStates());
+        boolean categoriesEmpty = isEmpty(params.getCategories());
+
+        List<Long> users = getIdsOrDefault(params.getUsers());
+        List<String> states = getStatesOrDefault(params.getStates());
+        List<Long> categories = getIdsOrDefault(params.getCategories());
+
+        LocalDateTime rangeStart = getRangeStart(params.getRangeStart());
+        LocalDateTime rangeEnd = getRangeEnd(params.getRangeEnd());
+
+        List<EventFullView> events = eventRepository.findFullViewsByAdminFilters(
+                users,
+                usersEmpty,
+                states,
+                statesEmpty,
+                categories,
+                categoriesEmpty,
+                rangeStart,
+                rangeEnd,
+                params.getFrom(),
+                params.getSize()
+        );
+
+        if (events.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> uris = events.stream()
+                .map(event -> "/events/" + event.getId())
+                .toList();
+
+        Map<Long, Long> stats = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
+
+        return events.stream()
+                .map(view -> EventMapper.toFullDto(view, stats.get(view.getId())))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public EventFullDto updateEventByAdmin(Long eventId, UpdateEventAdminRequest request) {
+        Event event = getEventIfExist(eventId);
+
+        if (request.getEventDate() != null) {
+            LocalDateTime eventDate = parseDateTimeOrNull(request.getEventDate());
+            validateAdminEventDate(eventDate);
+            event.setEventDate(eventDate);
+        }
+
+        if (request.getCategory() != null) {
+            Category category = getCategoryByIdWithValidation(request.getCategory());
+            event.setCategory(category);
+        }
+
+        if (request.getLocation() != null
+                && request.getLocation().getLat() != null
+                && request.getLocation().getLon() != null) {
+            Location location = getLocation(request.getLocation().getLat(), request.getLocation().getLon());
+            event.setLocation(location);
+        }
+
+        if (request.getAnnotation() != null) {
+            event.setAnnotation(request.getAnnotation());
+        }
+
+        if (request.getDescription() != null) {
+            event.setDescription(request.getDescription());
+        }
+
+        if (request.getPaid() != null) {
+            event.setPaid(request.getPaid());
+        }
+
+        if (request.getParticipantLimit() != null) {
+            event.setParticipantLimit(request.getParticipantLimit());
+        }
+
+        if (request.getRequestModeration() != null) {
+            event.setRequestModeration(request.getRequestModeration());
+        }
+
+        if (request.getTitle() != null) {
+            event.setTitle(request.getTitle());
+        }
+
+        if (request.getStateAction() != null) {
+            updateAdminState(event, request.getStateAction());
+        }
+
+        log.info("Запись в базу данных обновленного администратором события: {}", event);
+        eventRepository.save(event);
+
+        ViewStatsDto stat = getStatByEvent(event);
+
+        return eventRepository.findFullViewById(event.getId())
+                .map(view -> EventMapper.toFullDto(view, stat.getHits()))
+                .orElseThrow(() -> new RuntimeException("Ошибка при выгрузке EventFullView"));
+    }
+
 //private******************************************************
     private Location getLocation(Float Lat, Float Lon) {
         return locationRepository.findByLatAndLon(Lat, Lon)
@@ -255,5 +363,92 @@ public class EventServiceImpl implements EventService {
         }
 
         return viewsMap;
+    }
+
+    private boolean isEmpty(Collection<?> values) {
+        return values == null || values.isEmpty();
+    }
+
+    private List<Long> getIdsOrDefault(List<Long> ids) {
+        return isEmpty(ids) ? List.of(-1L) : ids;
+    }
+
+    private List<String> getStatesOrDefault(List<String> states) {
+        if (isEmpty(states)) {
+            return List.of(EventState.PENDING.name());
+        }
+
+        return states.stream()
+                .map(state -> EventState.from(state.trim().toUpperCase()).name())
+                .toList();
+    }
+
+    private LocalDateTime parseDateTimeOrNull(String date) {
+        if (date == null) {
+            return null;
+        }
+
+        if (date.isBlank()) {
+            throw new ValidationException("Field: date. Error: date must not be blank");
+        }
+
+        try {
+            return LocalDateTime.parse(date, FORMATTER);
+        } catch (DateTimeParseException ex) {
+            throw new ValidationException("Field: date. Error: date must have format yyyy-MM-dd HH:mm:ss. Value: "
+                    + date);
+        }
+    }
+
+    private Event getEventIfExist(long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Field: eventId. Error: event не найден. Value: " + eventId));
+    }
+
+    private void updateAdminState(Event event, String stateAction) {
+        switch (stateAction.trim().toUpperCase()) {
+            case "PUBLISH_EVENT" -> {
+                if (event.getState() != EventState.PENDING) {
+                    throw new ConflictException("Cannot publish the event because it's not in the right state: "
+                            + event.getState());
+                }
+
+                validateAdminEventDate(event.getEventDate());
+                event.setState(EventState.PUBLISHED);
+                event.setPublished(LocalDateTime.now());
+            }
+            case "REJECT_EVENT" -> {
+                if (event.getState() == EventState.PUBLISHED) {
+                    throw new ConflictException("Cannot reject the event because it's already published");
+                }
+
+                event.setState(EventState.CANCELED);
+            }
+            default -> throw new ValidationException("Field: stateAction. Error: must be PUBLISH_EVENT or "
+                    + "REJECT_EVENT. Value: " + stateAction);
+        }
+    }
+
+    private void validateAdminEventDate(LocalDateTime eventDate) {
+        if (eventDate.isBefore(LocalDateTime.now().plusHours(1))) {
+            throw new ConflictException("Field: eventDate. Error: Начало события должно быть не ранее чем через час. "
+                    + "Value: " + eventDate);
+        }
+    }
+
+    private LocalDateTime getRangeStart(String rangeStart) {
+        if (rangeStart == null) {
+            return LocalDateTime.of(1900, 1, 1, 0, 0);
+        }
+
+        return parseDateTimeOrNull(rangeStart);
+    }
+
+    private LocalDateTime getRangeEnd(String rangeEnd) {
+        if (rangeEnd == null) {
+            return LocalDateTime.of(3000, 1, 1, 0, 0);
+        }
+
+        return parseDateTimeOrNull(rangeEnd);
     }
 }
