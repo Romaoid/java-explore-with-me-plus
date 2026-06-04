@@ -39,6 +39,7 @@ public class EventMapper {
                         CategoryMapper.toDto(
                                 new Category(event.getCategoryId(), event.getCategoryName())))
                 .title(event.getTitle())
+                .confirmedRequests(event.getConfirmedRequests())
                 .initiator(
                         new UserShortDto(event.getInitiatorId(), event.getInitiatorName()))
                 .eventDate(event.getEventDate().format(FORMATTER))
