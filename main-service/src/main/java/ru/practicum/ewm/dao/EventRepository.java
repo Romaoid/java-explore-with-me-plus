@@ -7,6 +7,7 @@ import ru.practicum.ewm.model.Event;
 import ru.practicum.ewm.model.EventFullView;
 import ru.practicum.ewm.model.EventShortView;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -56,4 +57,41 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<EventShortView> findShortViewsById(@Param("userId") long id,
                                             @Param("from") long from,
                                             @Param("size") long size);
+
+    @Query(value = "SELECT " +
+            "e.id, " +
+            "e.title, " +
+            "e.annotation, " +
+            "e.category_id, " +
+            "c.name, " +
+            "e.event_date, " +
+            "e.initiator_id, " +
+            "u.name, " +
+            "e.paid, " +
+            "COALESCE((SELECT COUNT(*) " +
+            "FROM participation_requests pr WHERE pr.event_id = e.id AND pr.status = 'CONFIRMED'), 0) " +
+            "FROM events e " +
+            "JOIN categories c ON e.category_id = c.id " +
+            "JOIN users u ON e.initiator_id = u.id " +
+            "WHERE e.state = 'PUBLISHED' " +
+            "AND (:text IS NULL OR LOWER(e.annotation) LIKE LOWER(CONCAT('%', :text, '%')) " +
+            "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :text, '%'))) " +
+            "AND (:categories IS NULL OR e.category_id IN (:categories)) " +
+            "AND (:paid IS NULL OR e.paid = :paid) " +
+            "AND e.event_date >= :rangeStart " +
+            "AND (:rangeEnd IS NULL OR e.event_date <= :rangeEnd) " +
+            "AND (:onlyAvailable = false OR e.participant_limit = 0 OR e.participant_limit > " +
+            "COALESCE((SELECT COUNT(*) FROM participation_requests pr2 " +
+            "WHERE pr2.event_id = e.id AND pr2.status = 'CONFIRMED'), 0)) " +
+            "ORDER BY e.event_date ASC " +
+            "OFFSET :from LIMIT :size",
+            nativeQuery = true)
+    List<EventShortView> findPublicEvents(@Param("text") String text,
+                                          @Param("categories") List<Long> categories,
+                                          @Param("paid") Boolean paid,
+                                          @Param("rangeStart") LocalDateTime rangeStart,
+                                          @Param("rangeEnd") LocalDateTime rangeEnd,
+                                          @Param("onlyAvailable") Boolean onlyAvailable,
+                                          @Param("from") int from,
+                                          @Param("size") int size);
 }
