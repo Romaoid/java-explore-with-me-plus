@@ -12,6 +12,9 @@ import java.util.Set;
 import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
+
+    List<Event> findAllByIdIn(Set<Long> ids);
+
     @Query("SELECT " +
             "e.id AS id, " +
             "e.title AS title, " +

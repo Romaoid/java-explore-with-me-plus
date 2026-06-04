@@ -53,23 +53,22 @@ public class Event {
     private String title;
     private String annotation;
     private String description;
-}
 
-@Override
-public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-    Event event = (Event) o;
+        Event event = (Event) o;
 
-    if (event.id != null) {
-        return Objects.equals(id, event.id);
+        if (event.id != null) {
+            return Objects.equals(id, event.id);
+        }
+
+        return Objects.equals(title, event.title) &&
+                Objects.equals(eventDate, event.eventDate) &&
+                Objects.equals(initiator, event.initiator);
     }
-
-    return Objects.equals(title, event.title) &&
-            Objects.equals(eventDate, event.eventDate) &&
-            Objects.equals(initiator, event.initiator);
-}
 
     @Override
     public int hashCode() {
