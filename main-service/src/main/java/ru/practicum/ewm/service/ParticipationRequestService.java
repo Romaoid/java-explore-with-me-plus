@@ -12,4 +12,10 @@ public interface ParticipationRequestService {
 
     EventRequestStatusUpdateResult updateOwnParticipationRequests(Long userId, Long eventId,
                                                                   EventRequestStatusUpdateRequest request);
+
+    List<ParticipationRequestDto> getOwnRequests(Long userId);
+
+    ParticipationRequestDto addOwnRequest(Long userId, Long eventId);
+
+    ParticipationRequestDto cancelOwnRequest(Long userId, Long requestId);
 }

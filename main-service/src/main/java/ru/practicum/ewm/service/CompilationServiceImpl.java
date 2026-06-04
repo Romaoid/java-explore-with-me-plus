@@ -125,7 +125,7 @@ public class CompilationServiceImpl implements CompilationService {
         Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
         List<EventShortView> eventViews = eventRepository.findEventShortViewByIds(allEventIds);
 
-        Map<Long, Long> confirmedByEventId = eventViews.stream()
+        Map<Long, Integer> confirmedByEventId = eventViews.stream()
                 .collect(Collectors.toMap(
                         EventShortView::getId,
                         EventShortView::getConfirmedRequests
@@ -191,7 +191,7 @@ public class CompilationServiceImpl implements CompilationService {
         Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
 
         List<EventShortView> eventViews = eventRepository.findEventShortViewByIds(allEventIds);
-        Map<Long, Long> confirmedByEventId = eventViews.stream()
+        Map<Long, Integer> confirmedByEventId = eventViews.stream()
                 .collect(Collectors.toMap(
                         EventShortView::getId,
                         EventShortView::getConfirmedRequests

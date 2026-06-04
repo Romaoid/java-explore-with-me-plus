@@ -70,6 +70,7 @@ public class Event {
                 Objects.equals(initiator, event.initiator);
     }
 
+
     @Override
     public int hashCode() {
         if (id != null) {
