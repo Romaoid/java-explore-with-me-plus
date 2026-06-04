@@ -1,7 +1,9 @@
 package ru.practicum.ewm.service;
 
+import com.querydsl.core.types.dsl.BooleanExpression;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -9,16 +11,20 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dao.CompilationRepository;
 import ru.practicum.ewm.dao.EventRepository;
 import ru.practicum.ewm.dto.CompilationDto;
+import ru.practicum.ewm.dto.CompilationsGetParams;
 import ru.practicum.ewm.dto.NewCompilationDto;
 import ru.practicum.ewm.dto.UpdateCompilationRequest;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.mapper.CompilationMapper;
 import ru.practicum.ewm.model.Compilation;
 import ru.practicum.ewm.model.Event;
+import ru.practicum.ewm.model.EventShortView;
+import ru.practicum.ewm.model.QCompilation;
+import ru.practicum.stats.client.StatClient;
+import ru.practicum.stats.dto.ViewStatsDto;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -28,6 +34,7 @@ import java.util.stream.Collectors;
 public class CompilationServiceImpl implements CompilationService {
     private final CompilationRepository compilationRepository;
     private final EventRepository eventRepository;
+    private final StatClient statClient;
 
     @Override
     @Transactional
@@ -45,9 +52,9 @@ public class CompilationServiceImpl implements CompilationService {
                 .events(event)
                 .build();
 
-
         Compilation savedCompilation = compilationRepository.save(compilation);
-        return CompilationMapper.toCompilationDto(savedCompilation);
+
+        return getDto(savedCompilation);
     }
 
     @Override
@@ -82,24 +89,50 @@ public class CompilationServiceImpl implements CompilationService {
             compilation.setEvents(events);
         }
 
+        log.info("Обновление подборки: {}", compilation);
         Compilation updatedCompilation = compilationRepository.save(compilation);
-        return CompilationMapper.toCompilationDto(updatedCompilation);
+        return getDto(updatedCompilation);
     }
 
     @Override
-    public List<CompilationDto> getCompilations(Boolean pinned, int from, int size) {
-        log.info("Получение подборок событий (pinned={}, from={}, size={})", pinned, from, size);
-        Pageable pageable = PageRequest.of(from / size, size);
-        List<Compilation> compilations;
+    public List<CompilationDto> getCompilations(CompilationsGetParams params) {
+        log.info("Получение подборок событий (pinned={}, from={}, size={})",
+                params.getPinned(), params.getFrom(), params.getSize());
+        int from = params.getFrom();
+        int size = params.getSize();
 
-        if (pinned != null) {
-            compilations = compilationRepository.findAllByPinned(pinned, pageable);
-        } else {
-            compilations = compilationRepository.findAll(pageable).getContent();
-        }
+        int pageNumber = from / size;
+        int offsetInPage = from % size;
+        int pageSize = offsetInPage + size;
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        BooleanExpression predicate = buildPredicate(params);
+        Page<Compilation> page = compilationRepository.findAll(predicate, pageable);
+
+        List<Compilation> compilations = page.getContent().stream()
+                .skip(offsetInPage)
+                .limit(size)
+                .toList();
+
+        Set<Long> allEventIds = compilations.stream()
+                .flatMap(c -> c.getEvents().stream())
+                .map(Event::getId)
+                .collect(Collectors.toSet());
+
+        List<String> uris = allEventIds.stream()
+                .map(e -> "/events/" + e)
+                .toList();
+        Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
+        List<EventShortView> eventViews = eventRepository.findEventShortViewByIds(allEventIds);
+
+        Map<Long, Long> confirmedByEventId = eventViews.stream()
+                .collect(Collectors.toMap(
+                        EventShortView::getId,
+                        EventShortView::getConfirmedRequests
+                ));
 
         return compilations.stream()
-                .map(CompilationMapper::toCompilationDto)
+                .map(comp -> CompilationMapper.toCompilationDto(comp, viewsByEventId, confirmedByEventId))
                 .collect(Collectors.toList());
     }
 
@@ -108,6 +141,62 @@ public class CompilationServiceImpl implements CompilationService {
         log.info("Получение подборки событий с id: {}", compId);
         Compilation compilation = compilationRepository.findById(compId)
                 .orElseThrow(() -> new NotFoundException("Подборка с id=" + compId + " не найдена"));
-        return CompilationMapper.toCompilationDto(compilation);
+
+        return getDto(compilation);
+    }
+
+    private BooleanExpression buildPredicate(CompilationsGetParams params) {
+        QCompilation compilation = QCompilation.compilation;
+        BooleanExpression predicate = null;
+
+        if (params.getPinned() != null) {
+            predicate = compilation.pinned.eq(params.getPinned());
+        }
+
+        return predicate;
+    }
+
+    private Map<Long, Long> getStatsByUris(
+            LocalDateTime start,
+            LocalDateTime end,
+            List<String> uris,
+            Boolean unique) {
+
+        List<ViewStatsDto> stats = statClient.getStat(start, end, uris, unique);
+
+        if (stats == null || stats.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, Long> viewsMap = new LinkedHashMap<>();
+        for (ViewStatsDto dto : stats) {
+            String uri = dto.getUri();
+            Long id = Long.parseLong(
+                    uri.substring(
+                            uri.lastIndexOf('/') + 1));
+            viewsMap.put(id, dto.getHits());
+        }
+
+        return viewsMap;
+    }
+
+    private CompilationDto getDto(Compilation compilation) {
+        Set<Long> allEventIds = compilation.getEvents().stream()
+                .map(Event::getId)
+                .collect(Collectors.toSet());
+
+        List<String> uris = allEventIds.stream()
+                .map(e -> "/events/" + e)
+                .toList();
+        Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
+
+        List<EventShortView> eventViews = eventRepository.findEventShortViewByIds(allEventIds);
+        Map<Long, Long> confirmedByEventId = eventViews.stream()
+                .collect(Collectors.toMap(
+                        EventShortView::getId,
+                        EventShortView::getConfirmedRequests
+                ));
+
+        return CompilationMapper.toCompilationDto(compilation, viewsByEventId, confirmedByEventId);
     }
 }

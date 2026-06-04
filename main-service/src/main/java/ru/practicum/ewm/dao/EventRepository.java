@@ -8,6 +8,7 @@ import ru.practicum.ewm.model.EventFullView;
 import ru.practicum.ewm.model.EventShortView;
 
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
@@ -56,4 +57,19 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<EventShortView> findShortViewsById(@Param("userId") long id,
                                             @Param("from") long from,
                                             @Param("size") long size);
+
+    @Query("SELECT " +
+            "e.id AS id, " +
+            "e.title AS title, " +
+            "e.annotation AS annotation, " +
+            "e.category.id AS categoryId, " +
+            "e.category.name AS categoryName, " +
+            "e.eventDate AS eventDate, " +
+            "e.initiator.id AS initiatorId, " +
+            "e.initiator.name AS initiatorName, " +
+            "e.paid AS paid, " +
+            "(SELECT COUNT(r) FROM ParticipationRequest r WHERE r.event = e AND r.status = 'CONFIRMED') AS confirmedRequests " +
+            "FROM Event e " +
+            "WHERE e.id IN :ids")
+    List<EventShortView> findEventShortViewByIds(@Param("ids") Set<Long> ids);
 }
