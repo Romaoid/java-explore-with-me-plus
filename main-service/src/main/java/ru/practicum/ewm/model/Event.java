@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "events")
@@ -52,4 +53,28 @@ public class Event {
     private String title;
     private String annotation;
     private String description;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Event event = (Event) o;
+
+        if (event.id != null) {
+            return Objects.equals(id, event.id);
+        }
+
+        return Objects.equals(title, event.title) &&
+                Objects.equals(eventDate, event.eventDate) &&
+                Objects.equals(initiator, event.initiator);
+    }
+
+    @Override
+    public int hashCode() {
+        if (id != null) {
+            return Objects.hashCode(id);
+        }
+        return Objects.hash(title, eventDate, initiator);
+    }
 }
