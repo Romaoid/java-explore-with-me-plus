@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "events")
@@ -25,18 +26,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "initiator_id", nullable = false)
     private User initiator;
 
@@ -49,7 +49,7 @@ public class Event {
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
 
@@ -73,4 +73,28 @@ public class Event {
 
     @Column(name = "created_on", nullable = false)
     private LocalDateTime createdOn;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Event event = (Event) o;
+
+        if (event.id != null) {
+            return Objects.equals(id, event.id);
+        }
+
+        return Objects.equals(title, event.title) &&
+                Objects.equals(eventDate, event.eventDate) &&
+                Objects.equals(initiator, event.initiator);
+    }
+
+    @Override
+    public int hashCode() {
+        if (id != null) {
+            return Objects.hashCode(id);
+        }
+        return Objects.hash(title, eventDate, initiator);
+    }
 }

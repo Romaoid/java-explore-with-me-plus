@@ -1,6 +1,7 @@
 package ru.practicum.ewm.service;
 
 import ru.practicum.ewm.dto.CompilationDto;
+import ru.practicum.ewm.dto.CompilationsGetParams;
 import ru.practicum.ewm.dto.NewCompilationDto;
 import ru.practicum.ewm.dto.UpdateCompilationRequest;
 
@@ -13,7 +14,7 @@ public interface CompilationService {
 
     CompilationDto update(Long compId, UpdateCompilationRequest updateCompilationRequest);
 
-    List<CompilationDto> getCompilations(Boolean pinned, int from, int size);
+    List<CompilationDto> getCompilations(CompilationsGetParams params);
 
     CompilationDto getCompilationById(Long compId);
 }
