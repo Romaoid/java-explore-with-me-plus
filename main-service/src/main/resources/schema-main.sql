@@ -31,15 +31,17 @@ CREATE TABLE IF NOT EXISTS events (
     event_date         TIMESTAMP NOT NULL,
     location_id        BIGINT NOT NULL,
     paid               BOOLEAN DEFAULT FALSE,
+    confirmed_requests  INTEGER DEFAULT 0,
     participant_limit  INTEGER DEFAULT 0,
     request_moderation BOOLEAN DEFAULT TRUE,
     title              VARCHAR(120) NOT NULL,
     state              VARCHAR(30) DEFAULT 'PENDING',
     published_on       TIMESTAMP,
     created_on         TIMESTAMP NOT NULL,
-    CONSTRAINT fk_events_category_id FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    CONSTRAINT fk_events_category_id FOREIGN KEY (category_id) REFERENCES categories(id),
     CONSTRAINT fk_events_location_id FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE,
-    CONSTRAINT fk_events_initiator_id FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_events_initiator_id FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT chk_cnfrmd_request_limit CHECK (confirmed_requests <= participant_limit)
 );
 
 CREATE TABLE IF NOT EXISTS participation_requests (

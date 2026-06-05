@@ -1,16 +1,16 @@
 package ru.practicum.ewm.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-@Getter
-@Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class UpdateEventUserRequest {
+public class UpdateEventAdminRequest {
     @Size(min = 3, max = 120,
             message = "Field: title. Error: length must be between 3 and 120 characters. Value: ${validatedValue}")
     private String title;
@@ -26,18 +26,10 @@ public class UpdateEventUserRequest {
     @Size(max = 20)
     private String eventDate;
 
-    @Positive(message = "Category must be positive. Value: ${validatedValue}")
     private Long category;
-
-    @PositiveOrZero(message = "Field: participantLimit. Error: must be positive. Value: ${validatedValue}")
     private Integer participantLimit;
-
     private LocationDto location;
-
     private Boolean paid;
-
-    @Size(max = 15)
     private String stateAction;
-
     private Boolean requestModeration;
 }

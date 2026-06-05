@@ -8,6 +8,7 @@ import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
 import ru.practicum.stats.server.dao.AppStorage;
 import ru.practicum.stats.server.dao.StatStorage;
+import ru.practicum.stats.server.exception.ValidationException;
 import ru.practicum.stats.server.model.App;
 import ru.practicum.stats.server.model.Stat;
 import ru.practicum.stats.server.model.ViewStat;
@@ -46,6 +47,10 @@ public class StatService {
 
     @Transactional(readOnly = true)
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, boolean unique, List<String> uris) {
+
+        if (end.isBefore(start)) {
+            throw new ValidationException("start must be before end");
+        }
         List<ViewStat> views = statStorage.getStats(start, end, unique, uris);
 
         List<ViewStatsDto> dtos = views.stream()

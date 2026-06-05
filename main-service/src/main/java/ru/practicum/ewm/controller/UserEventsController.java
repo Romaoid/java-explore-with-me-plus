@@ -37,7 +37,7 @@ public class UserEventsController {
                                  @PathVariable Long eventId) {
         log.info("GET /users/{}/events/{}", userId, eventId);
 
-        return eventService.getOwnEvent(userId, eventId);
+        return eventService.getPrivateEvent(userId, eventId);
     }
 
     @PatchMapping("/{eventId}")
@@ -60,7 +60,7 @@ public class UserEventsController {
             @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
         log.info("GET /users/{}/events with params from= {} and size= {}", userId, from, size);
 
-        return eventService.getOwnEvents(userId, from, size);
+        return eventService.getPrivateEvents(userId, from, size);
     }
 
     @GetMapping("/{eventId}/requests")
@@ -68,7 +68,7 @@ public class UserEventsController {
     public List<ParticipationRequestDto> getOwnParticipationRequests(@PathVariable Long userId, @PathVariable Long eventId) {
         log.info("GET /users/{}/events/{}/requests", userId, eventId);
 
-        return requestService.getOwnParticipationRequests(userId, eventId);
+        return requestService.getRequestsByEventId(userId, eventId);
     }
 
     @PatchMapping("/{eventId}/requests")

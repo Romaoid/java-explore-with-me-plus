@@ -9,7 +9,7 @@ import lombok.*;
 @Getter
 @Setter
 public class CompilationsGetParams {
-    Boolean pinned;
+    private Boolean pinned;
 
     @Builder.Default
     private Integer from = 0;

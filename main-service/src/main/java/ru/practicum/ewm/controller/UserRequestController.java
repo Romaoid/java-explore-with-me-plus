@@ -21,7 +21,7 @@ public class UserRequestController {
     public List<ParticipationRequestDto> getOwnRequests(@PathVariable Long userId) {
         log.info("GET /users/{}/requests", userId);
 
-        return requestService.getOwnRequests(userId);
+        return requestService.getRequestsByUserId(userId);
     }
 
     @PostMapping
@@ -30,7 +30,7 @@ public class UserRequestController {
                                                   @RequestParam(name = "eventId") Long eventId) {
         log.info("POST /users/{}/requests?eventId={}", userId, eventId);
 
-        return requestService.addOwnRequest(userId, eventId);
+        return requestService.sendRequest(userId, eventId);
     }
 
     @PatchMapping("/{requestId}/cancel")
@@ -39,6 +39,6 @@ public class UserRequestController {
                                                     @PathVariable Long requestId) {
         log.info("PATCH /users/{}/requests/{}/cancel", userId, requestId);
 
-        return requestService.cancelOwnRequest(userId, requestId);
+        return requestService.cancelRequest(userId, requestId);
     }
 }

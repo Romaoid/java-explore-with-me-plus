@@ -14,21 +14,19 @@ public class CompilationMapper {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static CompilationDto toCompilationDto(Compilation compilation,
-                                                  Map<Long, Long> viewsMap,
-                                                  Map<Long, Integer> confirmedMap) {
+                                                  Map<Long, Long> viewsMap) {
         return CompilationDto.builder()
                 .id(compilation.getId())
                 .title(compilation.getTitle())
                 .pinned(compilation.getPinned())
                 .events(compilation.getEvents().stream()
-                        .map(event -> toEventShortDto(event, viewsMap, confirmedMap))
+                        .map(event -> toEventShortDto(event, viewsMap))
                         .collect(Collectors.toList()))
                 .build();
     }
 
     private static EventShortDto toEventShortDto(Event event,
-                                                 Map<Long, Long> viewsMap,
-                                                 Map<Long, Integer> confirmedMap) {
+                                                 Map<Long, Long> viewsMap) {
         Long eventId = event.getId();
 
         return EventShortDto.builder()
@@ -40,7 +38,7 @@ public class CompilationMapper {
                 .category(CategoryMapper.toDto(event.getCategory()))
                 .initiator(new UserShortDto(event.getInitiator().getId(), event.getInitiator().getName()))
                 .views(viewsMap.getOrDefault(eventId, 0L))
-                .confirmedRequests(confirmedMap.getOrDefault(eventId, 0))
+                .confirmedRequests(event.getConfirmedRequests())
                 .build();
     }
 }

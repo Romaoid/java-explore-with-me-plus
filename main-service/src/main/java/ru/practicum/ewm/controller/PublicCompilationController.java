@@ -1,5 +1,6 @@
 package ru.practicum.ewm.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ public class PublicCompilationController {
     private final CompilationService compilationService;
 
     @GetMapping
-    public List<CompilationDto> getCompilations(@ModelAttribute CompilationsGetParams params) {
+    public List<CompilationDto> getCompilations(@ModelAttribute @Valid CompilationsGetParams params) {
         return compilationService.getCompilations(params);
     }
 

@@ -8,14 +8,14 @@ import java.util.List;
 
 public interface ParticipationRequestService {
 
-    List<ParticipationRequestDto> getOwnParticipationRequests(long ownerId, long eventId);
+    List<ParticipationRequestDto> getRequestsByEventId(long ownerId, long eventId);
 
     EventRequestStatusUpdateResult updateOwnParticipationRequests(Long userId, Long eventId,
                                                                   EventRequestStatusUpdateRequest request);
 
-    List<ParticipationRequestDto> getOwnRequests(Long userId);
+    List<ParticipationRequestDto> getRequestsByUserId(Long userId);
 
-    ParticipationRequestDto addOwnRequest(Long userId, Long eventId);
+    ParticipationRequestDto sendRequest(Long userId, Long eventId);
 
-    ParticipationRequestDto cancelOwnRequest(Long userId, Long requestId);
+    ParticipationRequestDto cancelRequest(Long userId, Long requestId);
 }

@@ -18,7 +18,6 @@ import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.mapper.CompilationMapper;
 import ru.practicum.ewm.model.Compilation;
 import ru.practicum.ewm.model.Event;
-import ru.practicum.ewm.model.EventShortView;
 import ru.practicum.ewm.model.QCompilation;
 import ru.practicum.stats.client.StatClient;
 import ru.practicum.stats.dto.ViewStatsDto;
@@ -101,16 +100,12 @@ public class CompilationServiceImpl implements CompilationService {
         int from = params.getFrom();
         int size = params.getSize();
 
-        int pageNumber = from / size;
-        int offsetInPage = from % size;
-        int pageSize = offsetInPage + size;
-
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PageRequest.of(0, from + size);
         BooleanExpression predicate = buildPredicate(params);
         Page<Compilation> page = compilationRepository.findAll(predicate, pageable);
 
         List<Compilation> compilations = page.getContent().stream()
-                .skip(offsetInPage)
+                .skip(from)
                 .limit(size)
                 .toList();
 
@@ -122,17 +117,10 @@ public class CompilationServiceImpl implements CompilationService {
         List<String> uris = allEventIds.stream()
                 .map(e -> "/events/" + e)
                 .toList();
-        Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
-        List<EventShortView> eventViews = eventRepository.findEventShortViewByIds(allEventIds);
-
-        Map<Long, Integer> confirmedByEventId = eventViews.stream()
-                .collect(Collectors.toMap(
-                        EventShortView::getId,
-                        EventShortView::getConfirmedRequests
-                ));
+        Map<Long, Long> viewsByEventId = getStatsByUris(uris);
 
         return compilations.stream()
-                .map(comp -> CompilationMapper.toCompilationDto(comp, viewsByEventId, confirmedByEventId))
+                .map(comp -> CompilationMapper.toCompilationDto(comp, viewsByEventId))
                 .collect(Collectors.toList());
     }
 
@@ -153,16 +141,12 @@ public class CompilationServiceImpl implements CompilationService {
             predicate = compilation.pinned.eq(params.getPinned());
         }
 
-        return predicate;
+        return predicate == null ? compilation.isNotNull() : predicate;
     }
 
-    private Map<Long, Long> getStatsByUris(
-            LocalDateTime start,
-            LocalDateTime end,
-            List<String> uris,
-            Boolean unique) {
+    private Map<Long, Long> getStatsByUris(List<String> uris) {
 
-        List<ViewStatsDto> stats = statClient.getStat(start, end, uris, unique);
+        List<ViewStatsDto> stats = statClient.getStat(LocalDateTime.MIN, LocalDateTime.MAX, uris, false);
 
         if (stats == null || stats.isEmpty()) {
             return Collections.emptyMap();
@@ -188,15 +172,8 @@ public class CompilationServiceImpl implements CompilationService {
         List<String> uris = allEventIds.stream()
                 .map(e -> "/events/" + e)
                 .toList();
-        Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.now(), uris, false);
+        Map<Long, Long> viewsByEventId = getStatsByUris(uris);
 
-        List<EventShortView> eventViews = eventRepository.findEventShortViewByIds(allEventIds);
-        Map<Long, Integer> confirmedByEventId = eventViews.stream()
-                .collect(Collectors.toMap(
-                        EventShortView::getId,
-                        EventShortView::getConfirmedRequests
-                ));
-
-        return CompilationMapper.toCompilationDto(compilation, viewsByEventId, confirmedByEventId);
+        return CompilationMapper.toCompilationDto(compilation, viewsByEventId);
     }
 }

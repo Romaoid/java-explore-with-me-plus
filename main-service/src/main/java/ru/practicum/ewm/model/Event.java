@@ -43,6 +43,9 @@ public class Event {
     @Enumerated(value = EnumType.STRING)
     private EventState state;
 
+    @Column(name = "confirmed_requests")
+    private Integer confirmedRequests;
+
     @Column(name = "participant_limit")
     private Integer participantLimit;
 
