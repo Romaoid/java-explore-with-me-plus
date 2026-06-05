@@ -9,11 +9,11 @@ public interface EventService {
 
     EventFullDto addEvent(Long userId, NewEventDto dto);
 
-    EventFullDto getOwnEvent(Long userId, Long eventId);
+    EventFullDto getPrivateEvent(Long userId, Long eventId);
 
     EventFullDto updateEvent(Long userId, Long eventId, UpdateEventUserRequest request);
 
-    List<EventShortDto> getOwnEvents(long userId, int from, int size);
+    List<EventShortDto> getPrivateEvents(long userId, int from, int size);
 
     List<EventShortDto> getPublicEvents(EventSearchParams params,
                                         HttpServletRequest request);

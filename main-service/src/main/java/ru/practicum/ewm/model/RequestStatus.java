@@ -7,13 +7,15 @@ import ru.practicum.ewm.exception.ValidationException;
 public enum RequestStatus {
     REJECTED,
     PENDING,
-    CONFIRMED;
+    CONFIRMED,
+    CANCELED;
 
     public static RequestStatus from(String type) {
         return switch (type) {
             case "REJECTED" -> REJECTED;
             case "PENDING" -> PENDING;
             case "CONFIRMED" -> CONFIRMED;
+            case "CANCELED" -> CANCELED;
             default -> {
                 log.error("Непредвиденная ошибка конвертации RequestStatus из {}", type);
                 throw new ValidationException("Ошибка конвертации RequestStatus");

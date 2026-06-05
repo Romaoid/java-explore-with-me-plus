@@ -32,7 +32,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final UserRepository userRepository;
 
     @Override
-    public List<ParticipationRequestDto> getOwnParticipationRequests(long ownerId, long eventId) {
+    public List<ParticipationRequestDto> getRequestsByEventId(long ownerId, long eventId) {
         getEventIfExistWithOwnerValidation(eventId, ownerId);
 
         List<ParticipationRequest> requests =
@@ -53,7 +53,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         //проверяем для события лимит заявок не равен 0 или включена пре-модерация заявок
         long limit = event.getParticipantLimit();
         if (limit == 0) {
-            throw new ConflictException("The participant limit has been reached");
+            throw new ConflictException("The participant limit is 0, moderation is disabled");
         }
         if (!event.getRequestModeration()) {
             throw new ConflictException("The request moderation is disabled");
@@ -83,30 +83,56 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         //Подтверждаем до лимита и отклоняем остальное или отклоняем все
         List<ParticipationRequest> updatedRequests = new ArrayList<>();
-        List<ParticipationRequest> toConfirm;
+        List<ParticipationRequest> toConfirm = new ArrayList<>();
         List<ParticipationRequest> toReject;
-        if (request.getStatus() != RequestStatus.PENDING) {
+
+        if (request.getStatus() == RequestStatus.CONFIRMED) {
             long availableSlots = limit - countConfirmed;
 
             List<ParticipationRequest> targetRequests = requests.stream()
                     .filter(req -> request.getRequestIds().contains(req.getId()))
                     .toList();
 
-            toConfirm = targetRequests.stream().limit(availableSlots).toList();
-            toReject = targetRequests.stream().skip(availableSlots).toList();
+            toConfirm = targetRequests.stream()
+                    .limit(availableSlots)
+                    .toList();
+            toReject = targetRequests.stream()
+                    .skip(availableSlots)
+                    .toList();
 
             toConfirm.forEach(req -> req.setStatus(RequestStatus.CONFIRMED));
             toReject.forEach(req -> req.setStatus(RequestStatus.REJECTED));
 
-            updatedRequests.addAll(toConfirm);
-            updatedRequests.addAll(toReject);
+        } else if (request.getStatus() == RequestStatus.REJECTED) {
+            // Все запрашиваемые заявки отклоняем
+            toReject = requests.stream()
+                    .filter(req -> request.getRequestIds().contains(req.getId()))
+                    .toList();
+            toReject.forEach(req -> req.setStatus(RequestStatus.REJECTED));
 
-            log.info("Save to RequestRepository updated entities: {}", updatedRequests);
-            requestRepository.saveAll(updatedRequests);
         } else {
             throw new ValidationException("Field: status. Error: must be CONFIRMED or REJECTED. Value: " +
                     request.getStatus());
         }
+
+        updatedRequests.addAll(toConfirm);
+        updatedRequests.addAll(toReject);
+
+
+        int newConfirmedRequests = toConfirm.size();
+        if (newConfirmedRequests > 0) {
+            event.setConfirmedRequests(newConfirmedRequests + event.getConfirmedRequests());
+            eventRepository.save(event);
+        }
+
+        for (ParticipationRequest req : updatedRequests) {
+            log.info("Save to RequestRepository updated entity: [EventId:{}, RequesterId:{}, Status: {}, Created: {}",
+                    req.getEvent().getId(),
+                    req.getRequester().getId(),
+                    req.getStatus(),
+                    req.getCreated());
+        }
+        requestRepository.saveAll(updatedRequests);
 
         //формирование ответа
         List<ParticipationRequestDto> confirmed = toConfirm.stream().map(RequestMapper::toDto).toList();
@@ -116,7 +142,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     }
 
     @Override
-    public List<ParticipationRequestDto> getOwnRequests(Long userId) {
+    public List<ParticipationRequestDto> getRequestsByUserId(Long userId) {
         return requestRepository.findAllByRequesterId(userId).stream()
                 .map(RequestMapper::toDto)
                 .toList();
@@ -124,7 +150,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
     @Override
     @Transactional
-    public ParticipationRequestDto addOwnRequest(Long userId, Long eventId) {
+    public ParticipationRequestDto sendRequest(Long userId, Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Field: eventId. Error: event не найден. Value: " + eventId));
 
@@ -137,10 +163,8 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         }
 
         int limit = event.getParticipantLimit();
-        int confirmedRequests = eventRepository.findFullViewById(eventId)
-                .orElseThrow(() -> new ConflictException("Event not found"))
-                .getConfirmedRequests();
-        if (limit == 0 || limit == confirmedRequests) {
+        int confirmedRequests = event.getConfirmedRequests();
+        if (limit == confirmedRequests && limit != 0) {
             throw new ConflictException("The participant limit has been reached to event id: " + eventId);
         }
 
@@ -153,11 +177,17 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         request.setEvent(event);
         request.setRequester(userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User id: " + userId + " not found.")));
-        if (event.getRequestModeration()) {
+        if (!event.getRequestModeration() || limit == 0) {
             request.setStatus(RequestStatus.CONFIRMED);
+            int requestCount = eventRepository.updateIncrementConfirmedRequests(event.getId());
+            log.info("Auto-confirm by moderation request Count: {}", requestCount);
         }
 
-        log.info("Save to RequestRepository entity: {}", request);
+        log.info("Save to RequestRepository entity: [EventId:{}, RequesterId:{}, Status: {}, Created: {}",
+                request.getEvent().getId(),
+                request.getRequester().getId(),
+                request.getStatus(),
+                request.getCreated());
 
         request = requestRepository.save(request);
 
@@ -168,7 +198,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
     @Override
     @Transactional
-    public ParticipationRequestDto cancelOwnRequest(Long userId, Long requestId) {
+    public ParticipationRequestDto cancelRequest(Long userId, Long requestId) {
         ParticipationRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Request with id= " + requestId + " was not found"));
 
@@ -176,8 +206,14 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new NotFoundException("Request with id= " + requestId + " was not found");
         }
 
-        log.info("Delete from RequestRepository request: {}", request);
-        requestRepository.delete(request);
+        log.info("Canceling from RequestRepository request: {}", request);
+
+        request.setStatus(RequestStatus.CANCELED);
+        requestRepository.save(request);
+
+        if (request.getStatus() == RequestStatus.CONFIRMED) {
+            eventRepository.updateDecrementConfirmedRequests(request.getEvent().getId());
+        }
 
         return RequestMapper.toDto(request);
     }
