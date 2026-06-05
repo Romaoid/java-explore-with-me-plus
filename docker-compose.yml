@@ -43,7 +43,7 @@
       - ./volumes/postgres-main:/var/lib/postgresql/data/
       - ./main-service/src/main/resources/schema-main.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U stat -d ewm-stats" ]
+      test: [ "CMD-SHELL", "pg_isready -U main -d ewm-main" ]
       timeout: 5s
       interval: 5s
       retries: 10

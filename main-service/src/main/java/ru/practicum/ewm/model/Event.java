@@ -44,7 +44,7 @@ public class Event {
     private EventState state;
 
     @Column(name = "confirmed_requests")
-    private Integer ConfirmedRequests;
+    private Integer confirmedRequests;
 
     @Column(name = "participant_limit")
     private Integer participantLimit;

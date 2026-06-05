@@ -18,11 +18,6 @@ public class EventCustomRepository {
 
     private final JPAQueryFactory queryFactory;
 
-    // ==================== ПУБЛИЧНЫЕ МЕТОДЫ ====================
-
-    /**
-     * Для сортировки по просмотрам - получаем ВСЕ события без пагинации
-     */
     public List<Event> findAllPublicEvents(EventSearchParams params,
                                            LocalDateTime rangeStart,
                                            LocalDateTime rangeEnd) {
@@ -36,9 +31,6 @@ public class EventCustomRepository {
                 .fetch();
     }
 
-    /**
-     * Для сортировки по дате - получаем ТОЛЬКО нужную страницу (эффективно!)
-     */
     public List<Event> findPublicEventsWithPagination(EventSearchParams params,
                                                       LocalDateTime rangeStart,
                                                       LocalDateTime rangeEnd) {
@@ -54,26 +46,6 @@ public class EventCustomRepository {
                 .fetch();
     }
 
-    /**
-     * Подсчет общего количества событий для публичного API
-     */
-    public long countPublicEvents(EventSearchParams params,
-                                  LocalDateTime rangeStart,
-                                  LocalDateTime rangeEnd) {
-        QEvent event = QEvent.event;
-        BooleanExpression predicate = buildPublicPredicate(params, rangeStart, rangeEnd, event);
-
-        return queryFactory
-                .selectFrom(event)
-                .where(predicate)
-                .fetchCount();
-    }
-
-    // ==================== АДМИНИСТРАТИВНЫЕ МЕТОДЫ ====================
-
-    /**
-     * Для администратора - получаем события с фильтрацией и пагинацией
-     */
     public List<Event> findEventsByAdminFilters(AdminEventSearchParams params,
                                                 List<Long> users,
                                                 List<String> states,
@@ -96,30 +68,6 @@ public class EventCustomRepository {
                 .fetch();
     }
 
-    /**
-     * Подсчет общего количества событий для административного API
-     */
-    public long countAdminEvents(AdminEventSearchParams params,
-                                 List<Long> users,
-                                 List<String> states,
-                                 List<Long> categories,
-                                 LocalDateTime rangeStart,
-                                 LocalDateTime rangeEnd,
-                                 boolean usersEmpty,
-                                 boolean statesEmpty,
-                                 boolean categoriesEmpty) {
-        QEvent event = QEvent.event;
-        BooleanExpression predicate = buildAdminPredicate(event, users, states, categories,
-                rangeStart, rangeEnd, usersEmpty, statesEmpty, categoriesEmpty);
-
-        return queryFactory
-                .selectFrom(event)
-                .where(predicate)
-                .fetchCount();
-    }
-
-    // ==================== ОБЩИЕ МЕТОДЫ ====================
-
     public List<Event> findUserEventsWithPagination(Long userId, int from, int size) {
         QEvent event = QEvent.event;
 
@@ -133,8 +81,6 @@ public class EventCustomRepository {
                 .limit(size)
                 .fetch();
     }
-
-    // ==================== ПРИВАТНЫЕ МЕТОДЫ ====================
 
     private BooleanExpression buildPublicPredicate(EventSearchParams params,
                                                    LocalDateTime rangeStart,

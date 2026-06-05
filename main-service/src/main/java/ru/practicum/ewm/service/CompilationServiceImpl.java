@@ -9,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dao.CompilationRepository;
-import ru.practicum.ewm.dao.EventCustomRepository;
 import ru.practicum.ewm.dao.EventRepository;
 import ru.practicum.ewm.dto.CompilationDto;
 import ru.practicum.ewm.dto.CompilationsGetParams;
@@ -118,7 +117,7 @@ public class CompilationServiceImpl implements CompilationService {
         List<String> uris = allEventIds.stream()
                 .map(e -> "/events/" + e)
                 .toList();
-        Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.MAX, uris, false);
+        Map<Long, Long> viewsByEventId = getStatsByUris(uris);
 
         return compilations.stream()
                 .map(comp -> CompilationMapper.toCompilationDto(comp, viewsByEventId))
@@ -145,13 +144,9 @@ public class CompilationServiceImpl implements CompilationService {
         return predicate == null ? compilation.isNotNull() : predicate;
     }
 
-    private Map<Long, Long> getStatsByUris(
-            LocalDateTime start,
-            LocalDateTime end,
-            List<String> uris,
-            Boolean unique) {
+    private Map<Long, Long> getStatsByUris(List<String> uris) {
 
-        List<ViewStatsDto> stats = statClient.getStat(start, end, uris, unique);
+        List<ViewStatsDto> stats = statClient.getStat(LocalDateTime.MIN, LocalDateTime.MAX, uris, false);
 
         if (stats == null || stats.isEmpty()) {
             return Collections.emptyMap();
@@ -177,7 +172,7 @@ public class CompilationServiceImpl implements CompilationService {
         List<String> uris = allEventIds.stream()
                 .map(e -> "/events/" + e)
                 .toList();
-        Map<Long, Long> viewsByEventId = getStatsByUris(LocalDateTime.MIN, LocalDateTime.MAX, uris, false);
+        Map<Long, Long> viewsByEventId = getStatsByUris(uris);
 
         return CompilationMapper.toCompilationDto(compilation, viewsByEventId);
     }

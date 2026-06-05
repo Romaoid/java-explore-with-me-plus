@@ -6,10 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import ru.practicum.ewm.model.Event;
-import ru.practicum.ewm.model.EventFullView;
-import ru.practicum.ewm.model.EventShortView;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -18,129 +15,6 @@ public interface EventRepository extends JpaRepository<Event, Long>,
 
     List<Event> findAllByIdIn(Set<Long> ids);
 
-    @Query(value = "SELECT " +
-            "e.id, " +
-            "e.title, " +
-            "e.annotation, " +
-            "e.category_id, " +
-            "c.name, " +
-            "e.event_date, " +
-            "e.initiator_id, " +
-            "u.name, " +
-            "e.paid, " +
-            "e.confirmed_requests " +
-            "FROM events e " +
-            "JOIN categories c ON e.category_id = c.id " +
-            "JOIN users u ON e.initiator_id = u.id " +
-            "WHERE e.initiator_id = :userId " +
-            "ORDER BY e.event_date DESC " +
-            "OFFSET :from LIMIT :size",
-    nativeQuery = true)
-    List<EventShortView> findShortViewsById(@Param("userId") long id,
-                                            @Param("from") long from,
-                                            @Param("size") long size);
-
-    @Query(value = """
-            SELECT
-                e.id AS "id",
-                e.title AS "title",
-                e.annotation AS "annotation",
-                e.description AS "description",
-                e.category_id AS "categoryId",
-                c.name AS "categoryName",
-                e.initiator_id AS "initiatorId",
-                u.name AS "initiatorName",
-                l.lat AS "locationLat",
-                l.lon AS "locationLon",
-                e.paid AS "paid",
-                e.request_moderation AS "requestModeration",
-                e.participant_limit AS "participantLimit",
-                e.created_on AS "createdOn",
-                e.event_date AS "eventDate",
-                e.published_on AS "publishedOn",
-                e.state AS "state",
-                e.confirmed_requests AS "confirmedRequests"
-            FROM events e
-            JOIN categories c ON e.category_id = c.id
-            JOIN users u ON e.initiator_id = u.id
-            JOIN locations l ON e.location_id = l.id
-            WHERE (:usersEmpty = TRUE OR e.initiator_id IN (:users))
-              AND (:statesEmpty = TRUE OR e.state IN (:states))
-              AND (:categoriesEmpty = TRUE OR e.category_id IN (:categories))
-              AND e.event_date >= :rangeStart
-              AND e.event_date <= :rangeEnd
-            ORDER BY e.id ASC
-            LIMIT :size OFFSET :from
-            """,
-            nativeQuery = true)
-    List<EventFullView> findFullViewsByAdminFilters(@Param("users") List<Long> users,
-                                                    @Param("usersEmpty") boolean usersEmpty,
-                                                    @Param("states") List<String> states,
-                                                    @Param("statesEmpty") boolean statesEmpty,
-                                                    @Param("categories") List<Long> categories,
-                                                    @Param("categoriesEmpty") boolean categoriesEmpty,
-                                                    @Param("rangeStart") LocalDateTime rangeStart,
-                                                    @Param("rangeEnd") LocalDateTime rangeEnd,
-                                                    @Param("from") int from,
-                                                    @Param("size") int size);
-
-    @Query(value = """
-            SELECT
-                e.id AS "id",
-                e.title AS "title",
-                e.annotation AS "annotation",
-                e.category_id AS "categoryId",
-                c.name AS "categoryName",
-                e.event_date AS "eventDate",
-                e.initiator_id AS "initiatorId",
-                u.name AS "initiatorName",
-                e.paid AS "paid",
-                e.confirmed_requests AS "confirmedRequests"
-            FROM events e
-            JOIN categories c ON e.category_id = c.id
-            JOIN users u ON e.initiator_id = u.id
-            WHERE e.id IN (:ids)
-            """,
-            nativeQuery = true)
-    List<EventShortView> findEventShortViewByIds(@Param("ids") Set<Long> ids);
-
-//    @Query(value = "SELECT " +
-//            "e.id, " +
-//            "e.title, " +
-//            "e.annotation, " +
-//            "e.category_id, " +
-//            "c.name, " +
-//            "e.event_date, " +
-//            "e.initiator_id, " +
-//            "u.name, " +
-//            "e.paid, " +
-//            "COALESCE((SELECT COUNT(*) " +
-//            "FROM participation_requests pr WHERE pr.event_id = e.id AND pr.status = 'CONFIRMED'), 0) " +
-//            "FROM events e " +
-//            "JOIN categories c ON e.category_id = c.id " +
-//            "JOIN users u ON e.initiator_id = u.id " +
-//            "WHERE e.state = 'PUBLISHED' " +
-//            "AND (:text IS NULL OR LOWER(e.annotation) LIKE LOWER(CONCAT('%', :text, '%')) " +
-//            "OR LOWER(e.description) LIKE LOWER(CONCAT('%', :text, '%'))) " +
-//            "AND (:categories IS NULL OR e.category_id IN (:categories)) " +
-//            "AND (:paid IS NULL OR e.paid = :paid) " +
-//            "AND e.event_date >= :rangeStart " +
-//            "AND (:rangeEnd IS NULL OR e.event_date <= :rangeEnd) " +
-//            "AND (:onlyAvailable = false OR e.participant_limit = 0 OR e.participant_limit > " +
-//            "COALESCE((SELECT COUNT(*) FROM participation_requests pr2 " +
-//            "WHERE pr2.event_id = e.id AND pr2.status = 'CONFIRMED'), 0)) " +
-//            "ORDER BY e.event_date ASC " +
-//            "OFFSET :from LIMIT :size",
-//            nativeQuery = true)
-//    List<EventShortView> findPublicEvents(@Param("text") String text,
-//                                          @Param("categories") List<Long> categories,
-//                                          @Param("paid") Boolean paid,
-//                                          @Param("rangeStart") LocalDateTime rangeStart,
-//                                          @Param("rangeEnd") LocalDateTime rangeEnd,
-//                                          @Param("onlyAvailable") Boolean onlyAvailable,
-//                                          @Param("from") int from,
-//                                          @Param("size") int size);
-
     boolean existsByCategory_Id(Long categoryId);
 
     @Modifying
@@ -148,7 +22,7 @@ public interface EventRepository extends JpaRepository<Event, Long>,
             "UPDATE events SET confirmed_requests = (confirmed_requests - 1) " +
             "WHERE id = :id AND confirmed_requests > 0",
             nativeQuery = true)
-    int updateDecrementConfirmedRequests(@Param("id") Long id);
+    void updateDecrementConfirmedRequests(@Param("id") Long id);
 
     @Modifying
     @Query(value =

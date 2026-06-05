@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +52,7 @@ public class EventServiceImpl implements EventService {
                 .category(category)
                 .initiator(initiator)
                 .location(location)
-                .ConfirmedRequests(0)
+                .confirmedRequests(0)
                 .participantLimit(dto.getParticipantLimit())
                 .paid(dto.getPaid())
                 .requestModeration(dto.getRequestModeration())
@@ -96,14 +95,13 @@ public class EventServiceImpl implements EventService {
         return EventMapper.toFullDto(event, stat.getHits());
     }
 
-    @Override //Проверить что сортировка не ломает вывод
+    @Override
     public List<EventShortDto> getPrivateEvents(long userId, int from, int size) {
         if (!userRepository.existsById(userId)) {
             throw new ValidationException("Field: userId. Error: id не найден. Value: " + userId);
         }
 
         List<Event> events = eventCustomRepository.findUserEventsWithPagination(userId, from,  size);
-        //List<EventShortView> events = eventRepository.findShortViewsById(userId, from, size);
         if (events.isEmpty()) {
             return Collections.emptyList();
         }
@@ -136,10 +134,6 @@ public class EventServiceImpl implements EventService {
             throw new ValidationException("Дата начала не может быть позже даты окончания");
         }
 
-//        if (params.getSort() == EventSort.VIEWS) {
-//            return getPublicEventsSortedByViews(params, rangeStart, rangeEnd);
-//
-
         List<Event> events = eventCustomRepository.findPublicEventsWithPagination(params, rangeStart, rangeEnd);
 
         if (events.isEmpty()) {
@@ -158,7 +152,7 @@ public class EventServiceImpl implements EventService {
                         stats.get(view.getId())
                 ))
                 .toList();
-//проверить на постмане логику просмотров
+
         if (params.getSort() == EventSort.VIEWS) {
             return result.stream()
                     .sorted(
@@ -221,18 +215,6 @@ public class EventServiceImpl implements EventService {
                 rangeStart, rangeEnd,
                 usersEmpty, statesEmpty, categoriesEmpty
         );
-//        List<EventFullView> events = eventRepository.findFullViewsByAdminFilters(
-//                users,
-//                usersEmpty,
-//                states,
-//                statesEmpty,
-//                categories,
-//                categoriesEmpty,
-//                rangeStart,
-//                rangeEnd,
-//                params.getFrom(),
-//                params.getSize()
-//        );
 
         if (events.isEmpty()) {
             return Collections.emptyList();
@@ -308,7 +290,6 @@ public class EventServiceImpl implements EventService {
         return EventMapper.toFullDto(event, stat.getHits());
     }
 
-//private******************************************************
     private Location getLocation(Float Lat, Float Lon) {
         return locationRepository.findByLatAndLon(Lat, Lon)
                 .orElseGet(() -> locationRepository.save(new Location(Lat, Lon)));
@@ -528,57 +509,5 @@ public class EventServiceImpl implements EventService {
         if (request.getTitle() != null) {
             event.setTitle(request.getTitle());
         }
-    }
-
-    private Long extractEventIdFromUri(String uri) {
-        if (uri == null || !uri.contains("/events/")) {
-            return 0L;
-        }
-        try {
-            return Long.parseLong(uri.substring(uri.lastIndexOf('/') + 1));
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
-    }
-
-    //проверить сортировку
-    private List<EventShortDto> getPublicEventsSortedByViews(EventSearchParams params,
-                                                             LocalDateTime rangeStart,
-                                                             LocalDateTime rangeEnd) {
-        // Получаем ВСЕ события без пагинации
-        List<Event> allEvents = eventCustomRepository.findAllPublicEvents(params, rangeStart, rangeEnd);
-
-        if (allEvents.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        // Получаем просмотры для ВСЕХ событий
-        List<String> allUris = allEvents.stream()
-                .map(event -> "/events/" + event.getId())
-                .toList();
-
-        LocalDateTime statsStart = params.getRangeStart() != null ? params.getRangeStart() : LocalDateTime.now();
-        LocalDateTime statsEnd = params.getRangeEnd() != null ? params.getRangeEnd() : LocalDateTime.MAX;
-
-        List<ViewStatsDto> allStats = statClient.getStat(statsStart, statsEnd, allUris, false);
-        Map<Long, Long> viewsMap = allStats.stream()
-                .collect(Collectors.toMap(
-                        dto -> extractEventIdFromUri(dto.getUri()),
-                        ViewStatsDto::getHits,
-                        (existing, replacement) -> existing
-                ));
-
-        // Формируем DTO и сортируем по просмотрам
-        List<EventShortDto> sortedResult = allEvents.stream()
-                .map(event -> EventMapper.toShortDto(event,
-                        viewsMap.get(event.getId())))
-                .sorted(Comparator.comparingLong(EventShortDto::getViews).reversed())
-                .toList();
-
-        // Применяем пагинацию после сортировки
-        return sortedResult.stream()
-                .skip(params.getFrom())
-                .limit(params.getSize())
-                .collect(Collectors.toList());
     }
 }
