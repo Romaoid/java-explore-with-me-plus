@@ -71,7 +71,7 @@ public class EventServiceImpl implements EventService {
     public EventFullDto getPrivateEvent(Long userId, Long eventId) {
         Event event = getEventIfExistWithOwnerValidation(eventId, userId);
 
-        ViewStatsDto stat = getStatByEvent(event);
+        ViewStatsDto stat = getStatByEvent(event, false);
 
         return EventMapper.toFullDto(event, stat.getHits());
     }
@@ -90,7 +90,7 @@ public class EventServiceImpl implements EventService {
         log.info("Запись в базу данных обновленного объекта Event: {}", event);
         eventRepository.save(event);
 
-        ViewStatsDto stat = getStatByEvent(event);
+        ViewStatsDto stat = getStatByEvent(event, false);
 
         return EventMapper.toFullDto(event, stat.getHits());
     }
@@ -191,7 +191,7 @@ public class EventServiceImpl implements EventService {
                 LocalDateTime.now()
         );
 
-        ViewStatsDto stat = getStatByEvent(event);
+        ViewStatsDto stat = getStatByEvent(event, true);
         log.info("получение статистики события {} просмотров: {}", event.getId(), stat.getHits());
 
         return EventMapper.toFullDto(event, stat.getHits());
@@ -285,7 +285,7 @@ public class EventServiceImpl implements EventService {
         log.info("Запись в базу данных обновленного администратором события: {}", event);
         eventRepository.save(event);
 
-        ViewStatsDto stat = getStatByEvent(event);
+        ViewStatsDto stat = getStatByEvent(event, false);
 
         return EventMapper.toFullDto(event, stat.getHits());
     }
@@ -324,7 +324,7 @@ public class EventServiceImpl implements EventService {
         return eventDate;
     }
 
-    private ViewStatsDto getStatByEvent(Event event) {
+    private ViewStatsDto getStatByEvent(Event event, boolean uniq) {
         String uri = "/events/" + event.getId();
 
         log.info("Запрос статистики из stat-db для события: {}", event.getId());
@@ -332,7 +332,7 @@ public class EventServiceImpl implements EventService {
                 event.getCreated(),
                 LocalDateTime.now(),
                 List.of(uri),
-                false);
+                uniq);
 
         return dtos == null || dtos.isEmpty() ? new ViewStatsDto() : dtos.getFirst();
     }
