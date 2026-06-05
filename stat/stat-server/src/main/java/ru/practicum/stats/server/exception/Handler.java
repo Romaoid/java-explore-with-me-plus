@@ -27,4 +27,19 @@ public class Handler {
                 e.getMessage(),
                 stackTrace);
     }
+
+    @ExceptionHandler({ValidationException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Response handleBadRequestException(final Exception e) {
+        log.info("400 {}", e.getMessage(), e);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        String stackTrace = sw.toString();
+
+        return new Response(HttpStatus.BAD_REQUEST,
+                "Error from Stat-Server",
+                e.getMessage(),
+                stackTrace);
+    }
 }
