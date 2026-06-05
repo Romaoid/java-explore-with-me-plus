@@ -7,16 +7,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dao.EventRepository;
 import ru.practicum.ewm.dao.ParticipationRequestRepository;
+import ru.practicum.ewm.dao.UserRepository;
 import ru.practicum.ewm.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.dto.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.dto.ParticipationRequestDto;
+import ru.practicum.ewm.mapper.RequestMapper;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.exception.ValidationException;
-import ru.practicum.ewm.mapper.RequestMapper;
-import ru.practicum.ewm.model.Event;
-import ru.practicum.ewm.model.ParticipationRequest;
-import ru.practicum.ewm.model.RequestStatus;
+import ru.practicum.ewm.model.*;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,6 +29,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private static final Logger log = LoggerFactory.getLogger(ParticipationRequestServiceImpl.class);
     private final EventRepository eventRepository;
     private final ParticipationRequestRepository requestRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<ParticipationRequestDto> getOwnParticipationRequests(long ownerId, long eventId) {
@@ -113,6 +113,73 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         List<ParticipationRequestDto> rejected = toReject.stream().map(RequestMapper::toDto).toList();
 
         return new EventRequestStatusUpdateResult(confirmed, rejected);
+    }
+
+    @Override
+    public List<ParticipationRequestDto> getOwnRequests(Long userId) {
+        return requestRepository.findAllByRequesterId(userId).stream()
+                .map(RequestMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public ParticipationRequestDto addOwnRequest(Long userId, Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Field: eventId. Error: event не найден. Value: " + eventId));
+
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new ConflictException("Field: eventId. Error: event не найден. Value: " + eventId);
+        }
+
+        if (event.getInitiator().getId().equals(userId)) {
+            throw new ConflictException("The request to own event is rejected");
+        }
+
+        int limit = event.getParticipantLimit();
+        int confirmedRequests = eventRepository.findFullViewById(eventId)
+                .orElseThrow(() -> new ConflictException("Event not found"))
+                .getConfirmedRequests();
+        if (limit == 0 || limit == confirmedRequests) {
+            throw new ConflictException("The participant limit has been reached to event id: " + eventId);
+        }
+
+        if (requestRepository.existsByEventIdAndRequesterId(eventId, userId)) {
+            throw new ConflictException("The request to event id: " + eventId +
+                    " from user id: " + userId + "is already exists.");
+        }
+
+        ParticipationRequest request = new ParticipationRequest();
+        request.setEvent(event);
+        request.setRequester(userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User id: " + userId + " not found.")));
+        if (event.getRequestModeration()) {
+            request.setStatus(RequestStatus.CONFIRMED);
+        }
+
+        log.info("Save to RequestRepository entity: {}", request);
+
+        request = requestRepository.save(request);
+
+        log.info("request saved with id: {}", request.getId());
+
+        return RequestMapper.toDto(request);
+    }
+
+    @Override
+    @Transactional
+    public ParticipationRequestDto cancelOwnRequest(Long userId, Long requestId) {
+        ParticipationRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new NotFoundException("Request with id= " + requestId + " was not found"));
+
+        if (!request.getRequester().getId().equals(userId)) {
+            throw new NotFoundException("Request with id= " + requestId + " was not found");
+        }
+
+        log.info("Delete from RequestRepository request: {}", request);
+        requestRepository.delete(request);
+
+        return RequestMapper.toDto(request);
     }
 
     private Event getEventIfExistWithOwnerValidation(long eventId, long userId) {

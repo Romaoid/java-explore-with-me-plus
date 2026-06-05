@@ -1,5 +1,6 @@
 package ru.practicum.ewm.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,10 +10,7 @@ import ru.practicum.ewm.dao.CategoryRepository;
 import ru.practicum.ewm.dao.EventRepository;
 import ru.practicum.ewm.dao.LocationRepository;
 import ru.practicum.ewm.dao.UserRepository;
-import ru.practicum.ewm.dto.EventFullDto;
-import ru.practicum.ewm.dto.EventShortDto;
-import ru.practicum.ewm.dto.NewEventDto;
-import ru.practicum.ewm.dto.UpdateEventUserRequest;
+import ru.practicum.ewm.dto.*;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.exception.ValidationException;
@@ -20,8 +18,6 @@ import ru.practicum.ewm.mapper.EventMapper;
 import ru.practicum.ewm.model.*;
 import ru.practicum.stats.client.StatClient;
 import ru.practicum.stats.dto.ViewStatsDto;
-import ru.practicum.ewm.dto.AdminEventSearchParams;
-import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
@@ -170,6 +166,101 @@ public class EventServiceImpl implements EventService {
         return events.stream()
                 .map(view -> EventMapper.toShortDto(view, stats.get(view.getId())))
                 .toList();
+    }
+
+    @Override
+    public List<EventShortDto> getPublicEvents(EventSearchParams params,
+                                               HttpServletRequest request) {
+
+        LocalDateTime rangeStart = params.getRangeStart();
+        LocalDateTime rangeEnd = params.getRangeEnd();
+
+        statClient.hit(
+                "ewm-main-service",
+                request.getRequestURI(),
+                request.getRemoteAddr(),
+                LocalDateTime.now()
+        );
+
+        if (rangeStart == null && rangeEnd == null) {
+            rangeStart = LocalDateTime.now();
+        }
+
+        if (rangeStart != null
+                && rangeEnd != null
+                && rangeStart.isAfter(rangeEnd)) {
+            throw new ValidationException("Дата начала не может быть позже даты окончания");
+        }
+
+        List<EventShortView> events = eventRepository.findPublicEvents(
+                params.getText(),
+                params.getCategories(),
+                params.getPaid(),
+                rangeStart,
+                rangeEnd,
+                params.getOnlyAvailable(),
+                params.getFrom(),
+                params.getSize()
+        );
+
+        if (events.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> uris = events.stream()
+                .map(event -> "/events/" + event.getId())
+                .toList();
+
+        Map<Long, Long> stats = getStatsByUris(
+                LocalDateTime.MIN,
+                LocalDateTime.now(),
+                uris,
+                false
+        );
+
+        List<EventShortDto> result = events.stream()
+                .map(view -> EventMapper.toShortDto(
+                        view,
+                        stats.get(view.getId())
+                ))
+                .toList();
+
+        if (params.getSort() == EventSort.VIEWS) {
+            return result.stream()
+                    .sorted(
+                            Comparator.comparingLong(EventShortDto::getViews)
+                                    .reversed()
+                    )
+                    .toList();
+        }
+
+        return result;
+    }
+
+    @Override
+    public EventFullDto getPublicEventById(Long id,
+                                           HttpServletRequest request) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Событие с id=" + id + " не найдено"));
+
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Событие с id=" + id + " не найдено");
+        }
+
+        String uri = "/events/" + id;
+
+        ViewStatsDto stat = getStatByEvent(event);
+
+        statClient.hit(
+                "ewm-main-service",
+                uri,
+                request.getRemoteAddr(),
+                LocalDateTime.now()
+        );
+
+        return eventRepository.findFullViewById(event.getId())
+                .map(view -> EventMapper.toFullDto(view, stat.getHits()))
+                .orElseThrow(() -> new RuntimeException("Ошибка при выгрузке FullView для публичного события"));
     }
 
     @Override

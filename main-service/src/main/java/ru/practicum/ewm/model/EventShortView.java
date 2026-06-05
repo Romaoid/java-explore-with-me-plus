@@ -21,5 +21,5 @@ public interface EventShortView {
 
     Boolean getPaid();
 
-    Long getConfirmedRequests();
+    Integer getConfirmedRequests();
 }
