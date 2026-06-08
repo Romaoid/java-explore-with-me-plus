@@ -15,7 +15,10 @@ public interface EventRepository extends JpaRepository<Event, Long>,
 
     List<Event> findAllByIdIn(Set<Long> ids);
 
-    boolean existsByCategory_Id(Long categoryId);
+    @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END " +
+            "FROM Event e " +
+            "WHERE e.category.id = :categoryId")
+    boolean existsByCategoryId(@Param("categoryId") Long categoryId);
 
     @Modifying
     @Query(value =
