@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.stats.dto.EndpointHitDto;
 import ru.practicum.stats.dto.ViewStatsDto;
+import ru.practicum.stats.server.exception.ValidationException;
 import ru.practicum.stats.server.service.StatService;
 
 import java.net.URLDecoder;
@@ -28,12 +29,17 @@ public class StatController {
     }
 
     @GetMapping(path = "/stats")
-    public List<ViewStatsDto> getStats(@RequestParam String start,
-                                       @RequestParam String end,
+    public List<ViewStatsDto> getStats(@RequestParam(required = false) String start,
+                                       @RequestParam(required = false) String end,
                                        @RequestParam(defaultValue = "false") boolean unique,
                                        @RequestParam(required = false) List<String> uris) {
         log.info("Вызван эндпоинт на получение списка статистики с параметрами: start = {},\nend = {},\nunique = {},\nuris = {}",
                 start, end, unique, uris);
+
+        if (start == null || end == null) {
+            log.error("Start or end parameter is missing");
+            throw new ValidationException("Start or end parameter is missing");
+        }
 
         String decodedStart = URLDecoder.decode(start, StandardCharsets.UTF_8);
         String decodedEnd = URLDecoder.decode(end, StandardCharsets.UTF_8);
