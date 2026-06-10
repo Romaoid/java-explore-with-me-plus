@@ -1,6 +1,5 @@
 package ru.practicum.ewm.dao;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,12 +11,26 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    List<Comment> findAllByEventId(Long eventId, Pageable pageable);
+    @Query(value = "SELECT * FROM comments c " +
+            "WHERE c.event_id = :eventId " +
+            "ORDER BY c.creation_date ASC " +
+            "LIMIT :size OFFSET :from",
+            nativeQuery = true)
+    List<Comment> findAllByEventId(@Param("eventId") Long eventId, @Param("from") int from, @Param("size") int size);
 
-    @Query("SELECT c FROM Comment c " +
+    @Query(value = "SELECT * FROM comments c " +
             "WHERE (:text IS NULL OR LOWER(c.text) LIKE LOWER(CONCAT('%', :text, '%'))) " +
-            "AND (:eventId IS NULL OR c.event.id = :eventId) " +
-            "AND (:authorId IS NULL OR c.author.id = :authorId)")
+            "AND (:eventId IS NULL OR c.event_id = :eventId) " +
+            "AND (:authorId IS NULL OR c.author_id = :authorId) " +
+            "ORDER BY c.creation_date ASC " +
+            "LIMIT :size OFFSET :from",
+            nativeQuery = true)
     List<Comment> findCommentsAdmin(@Param("text") String text, @Param("eventId") Long eventId,
-                                    @Param("authorId") Long authorId, Pageable pageable);
+                                    @Param("authorId") Long authorId, @Param("from") int from,
+                                    @Param("size") int size);
+
+    @Query("SELECT c " +
+            "FROM Comment c " +
+            "WHERE c.parentComment.id = :id")
+    List<Comment> findAnswersByCommentId(@Param("id") long commentId);
 }

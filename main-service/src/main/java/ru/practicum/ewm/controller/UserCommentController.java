@@ -20,7 +20,7 @@ import ru.practicum.ewm.service.CommentService;
 @RequestMapping("/users/{userId}/events/{eventId}/comments")
 @RequiredArgsConstructor
 @Validated
-public class PrivateCommentController {
+public class UserCommentController {
 
     private final CommentService commentService;
 

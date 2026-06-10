@@ -2,8 +2,6 @@ package ru.practicum.ewm.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dao.CommentRepository;
@@ -21,6 +19,7 @@ import ru.practicum.ewm.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -43,7 +42,7 @@ public class CommentServiceImpl implements CommentService {
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не было найдено"));
 
         if (event.getState() != EventState.PUBLISHED) {
-            throw new ConflictException("Нельзя создать комментарий для несуществующего события");
+            throw new NotFoundException("Событие с id=" + eventId + " не было найдено");
         }
 
         Comment parentComment = null;
@@ -54,7 +53,7 @@ public class CommentServiceImpl implements CommentService {
                             + " не найден"));
 
             if (!parentComment.getEvent().getId().equals(eventId)) {
-                throw new ConflictException("Невозможно ответить на комментарий с другого события.");
+                throw new NotFoundException("Комментарий с id=" + requestDto.getAnswerTo() + " для ответа не найден");
             }
         }
 
@@ -74,16 +73,13 @@ public class CommentServiceImpl implements CommentService {
     public CommentDto updateComment(Long userId, Long eventId, Long commentId, CommentDtoRequest updateDto) {
         log.info("Пользователь с id={} обновляет комментарий с id={} для события с id={}", userId, commentId, eventId);
 
-        if (!userRepository.existsById(userId)) {
-            throw new NotFoundException("Пользователь с id=" + userId + " не был найден");
-        }
-
-        if (!eventRepository.existsById(eventId)) {
-            throw new NotFoundException("Событие с id=" + eventId + " не было найдено");
-        }
-
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new NotFoundException("Комментарий с id=" + commentId + " не был найден"));
+
+        if (!Objects.equals(comment.getEvent().getId(), eventId)) {
+            throw new NotFoundException("Комментарий с id=" + commentId +
+                    " не был найден в событии id = " + comment.getEvent().getId());
+        }
 
         if (!comment.getAuthor().getId().equals(userId)) {
             throw new ConflictException("Только автор может обновить комментарий.");
@@ -97,20 +93,20 @@ public class CommentServiceImpl implements CommentService {
     @Transactional
     public void deleteComment(Long userId, Long eventId, Long commentId) {
         log.info("Пользователь с id={} удаляет комментарий с id={} для события с id={}", userId, commentId, eventId);
-        if (!userRepository.existsById(userId)) {
-            throw new NotFoundException("Пользователь с id=" + userId + " не был найден");
-        }
 
-        if (!eventRepository.existsById(eventId)) {
-            throw new NotFoundException("Событие с id=" + eventId + " не было найдено");
-        }
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new NotFoundException("Комментарий с id=" + commentId + " не был найден"));
+
+        if (!Objects.equals(comment.getEvent().getId(), eventId)) {
+            throw new NotFoundException("Комментарий с id=" + commentId +
+                    " не был найден в событии id = " + comment.getEvent().getId());
+        }
 
         if (!comment.getAuthor().getId().equals(userId)) {
             throw new ConflictException("Только автор комментария может его удалить.");
         }
 
+        clearAnswerLinks(commentId);
         commentRepository.delete(comment);
     }
 
@@ -122,15 +118,16 @@ public class CommentServiceImpl implements CommentService {
         if (!commentRepository.existsById(commentId)) {
             throw new NotFoundException("Комментарий с id=" + commentId + " не был найден");
         }
+
+        clearAnswerLinks(commentId);
         commentRepository.deleteById(commentId);
     }
 
     @Override
     public List<CommentDto> getCommentsAdmin(String text, Long eventId, Long authorId, int from, int size) {
         log.info("Получение комментариев администратором по фильтрам");
-        Pageable pageable = PageRequest.of(from / size, size);
 
-        return commentRepository.findCommentsAdmin(text, eventId, authorId, pageable).stream()
+        return commentRepository.findCommentsAdmin(text, eventId, authorId, from, size).stream()
                 .map(CommentMapper::toCommentDto)
                 .collect(Collectors.toList());
     }
@@ -142,9 +139,19 @@ public class CommentServiceImpl implements CommentService {
         if (!eventRepository.existsById(eventId)) {
             throw new NotFoundException("Событие с id=" + eventId + " не было найдено");
         }
-        Pageable pageable = PageRequest.of(from / size, size);
-        return commentRepository.findAllByEventId(eventId, pageable).stream()
+
+        return commentRepository.findAllByEventId(eventId, from, size).stream()
                 .map(CommentMapper::toCommentDto)
                 .collect(Collectors.toList());
+    }
+
+    private void clearAnswerLinks(long commentId) {
+        List<Comment> answers = commentRepository.findAnswersByCommentId(commentId);
+
+        for (Comment comment : answers) {
+            comment.setParentComment(null);
+        }
+
+        commentRepository.saveAll(answers);
     }
 }
