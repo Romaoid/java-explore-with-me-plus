@@ -74,3 +74,9 @@ CREATE TABLE IF NOT EXISTS comments (
     CONSTRAINT fk_comments_parent FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
     CONSTRAINT chk_comments_ids CHECK (id != comment_id)
 );
+
+CREATE INDEX idx_comments_event_author_date
+    ON comments(event_id, author_id, creation_date ASC);
+
+CREATE INDEX idx_comments_comment_id
+    ON comments(comment_id) WHERE comment_id IS NOT NULL;
